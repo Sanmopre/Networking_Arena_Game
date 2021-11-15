@@ -8,12 +8,14 @@ public class Main_Menu_Behaviour : MonoBehaviour
     public GameObject Lobby_Menu;
     public GameObject Main_Menu;
     public GameObject Searching_Menu;
+    public GameObject First_Menu;
 
     private void Awake()
     {
         Lobby_Menu.SetActive(false);
-        Main_Menu.SetActive(true);
+        Main_Menu.SetActive(false);
         Searching_Menu.SetActive(false);
+        First_Menu.SetActive(true);
     }
 
     public void Quickplay_Button() 
@@ -21,6 +23,7 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Lobby_Menu.SetActive(false);
         Main_Menu.SetActive(false);
         Searching_Menu.SetActive(true);
+        First_Menu.SetActive(false);
     }
 
     public void Join_Lobby()
@@ -28,6 +31,7 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Lobby_Menu.SetActive(true);
         Main_Menu.SetActive(false);
         Searching_Menu.SetActive(false);
+        First_Menu.SetActive(false);
     }
 
     public void Options_Button() 
@@ -40,6 +44,7 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Lobby_Menu.SetActive(false);
         Main_Menu.SetActive(true);
         Searching_Menu.SetActive(false);
+        First_Menu.SetActive(false);
     }
 
     public void Buck_Button_Searching()
@@ -47,6 +52,7 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Lobby_Menu.SetActive(false);
         Main_Menu.SetActive(true);
         Searching_Menu.SetActive(false);
+        First_Menu.SetActive(false);
     }
 
     public void Exit_Button() 
@@ -54,5 +60,28 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Application.Quit();
     }
 
+    public void Log_In() 
+    {
+        Lobby_Menu.SetActive(false);
+        Main_Menu.SetActive(true);
+        Searching_Menu.SetActive(false);
+        First_Menu.SetActive(false);
+    }
+
+    public void Register()
+    {
+        Lobby_Menu.SetActive(false);
+        Main_Menu.SetActive(true);
+        Searching_Menu.SetActive(false);
+        First_Menu.SetActive(false);
+    }
+
+    public void Log_Out()
+    {
+        Lobby_Menu.SetActive(false);
+        Main_Menu.SetActive(false);
+        Searching_Menu.SetActive(false);
+        First_Menu.SetActive(true);
+    }
 
 }
