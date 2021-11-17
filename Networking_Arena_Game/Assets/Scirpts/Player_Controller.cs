@@ -8,6 +8,7 @@ public class Player_Controller : MonoBehaviour
     private Rigidbody myRigidbody;
     public Camera mainCamera;
     public Vector3 cameraOffset;
+    public float cameraMovementFollowUpSpeed;
 
     private Vector3 moveInput;
 
@@ -22,7 +23,6 @@ public class Player_Controller : MonoBehaviour
     {
         //Get input//
         moveInput = new Vector3(Input.GetAxisRaw("Horizontal"),0f,Input.GetAxisRaw("Vertical"));
-
     }
 
     private void FixedUpdate()
@@ -32,12 +32,15 @@ public class Player_Controller : MonoBehaviour
 
         //Player rotation
         transform.LookAt(GetPlayerPointToLook());
+
+        //SMOOOOTH CAMERA FOLLOW
+        CameraFollow();
     }
+
 
     void MovePlayer() 
     {
         myRigidbody.velocity = moveInput * movementSpeed;
-        mainCamera.transform.position = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
     }
 
     Vector3 GetPlayerPointToLook() 
@@ -57,5 +60,12 @@ public class Player_Controller : MonoBehaviour
 
         //Adjustment
         return new Vector3(pointToLook.x, transform.position.y, pointToLook.z);
+    }
+
+    void CameraFollow() 
+    {
+        Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
+        Vector3 smoothedPosition = Vector3.Lerp(mainCamera.transform.position, desiredPosition, cameraMovementFollowUpSpeed);
+        mainCamera.transform.position = smoothedPosition;
     }
 }
