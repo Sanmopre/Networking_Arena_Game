@@ -35,7 +35,8 @@ public class Player_Controller : MonoBehaviour
 
     void MovePlayer() 
     {
-        myRigidbody.velocity = moveInput * movementSpeed; 
+        myRigidbody.velocity = moveInput * movementSpeed;
+        mainCamera.transform.position = new Vector3(transform.position.x - 15,56,transform.position.z - 15);
     }
 
     Vector3 GetPlayerPointToLook() 
