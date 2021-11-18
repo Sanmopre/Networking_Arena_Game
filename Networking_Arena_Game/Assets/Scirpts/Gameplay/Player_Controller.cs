@@ -17,6 +17,10 @@ public class Player_Controller : MonoBehaviour
     public GameObject bulletPrefab;
     public float bulletForce = 15f;
 
+    //Special Attack
+    public GameObject laserPrefab;
+    private GameObject Instance;
+    private LaserBehaviour LaserScript;
 
     void Start()
     {
@@ -30,9 +34,17 @@ public class Player_Controller : MonoBehaviour
         moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
 
         //Shooting Behaviour
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        if (Input.GetMouseButtonDown(0))
         {
             Shoot();
+        }
+        if (Input.GetMouseButtonDown(1))
+        {
+            ShootLaser();
+        }
+        if (Input.GetMouseButtonUp(1))
+        {
+            DestroyLaser();
         }
     }
 
@@ -46,7 +58,6 @@ public class Player_Controller : MonoBehaviour
 
         //SMOOOOTH CAMERA FOLLOW
         CameraFollow();
-
 
     }
 
@@ -84,8 +95,20 @@ public class Player_Controller : MonoBehaviour
 
     void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.identity);
+        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position,Quaternion.Euler(canonPosition.forward));
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
         bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
+    }
+    void ShootLaser()
+    {
+        Destroy(Instance);
+        Instance = Instantiate(laserPrefab, canonPosition.position, canonPosition.rotation);
+        Instance.transform.parent = transform;
+        LaserScript = Instance.GetComponent<LaserBehaviour>();
+    }
+    void DestroyLaser()
+    {
+        LaserScript.DisablePrepare();
+        Destroy(Instance, 1);
     }
 }

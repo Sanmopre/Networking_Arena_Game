@@ -905,6 +905,7 @@ MonoBehaviour:
   canonPosition: {fileID: 968506049}
   bulletPrefab: {fileID: 4832174139182581250, guid: 64b43f0ba5f58d243868804417ccf965, type: 3}
   bulletForce: 25
+  laserPrefab: {fileID: 1418158253269514, guid: 280b8b1393d77f148a8cbcfc7f36e116, type: 3}
 --- !u!1 &709052754
 GameObject:
   m_ObjectHideFlags: 0
