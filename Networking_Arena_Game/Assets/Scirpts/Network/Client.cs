@@ -10,6 +10,7 @@ using System.Text;
 public class Client : MonoBehaviour
 {
     const int MAX_BUFFER = 1300;
+    EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6969);
 
     Socket toServer = null;
     EndPoint remoteAddress = null;
@@ -35,7 +36,7 @@ public class Client : MonoBehaviour
         toServer.Blocking = false;
         toServer.Bind(new IPEndPoint(IPAddress.Any, 0));
 
-        remoteAddress = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6969);
+        remoteAddress = serverAddress;
     }
 
     void Update()
@@ -165,4 +166,6 @@ public class Client : MonoBehaviour
 
         return recvBuffer;
     }
+
+    // TODO: OnDestroy() and testing
 }
