@@ -12,6 +12,11 @@ public class Player_Controller : MonoBehaviour
 
     private Vector3 moveInput;
 
+    //Shooting variables
+    public Transform canonPosition;
+    public GameObject bulletPrefab;
+    public float bulletForce = 15f;
+
 
     void Start()
     {
@@ -22,7 +27,13 @@ public class Player_Controller : MonoBehaviour
     void Update()
     {
         //Get input//
-        moveInput = new Vector3(Input.GetAxisRaw("Horizontal"),0f,Input.GetAxisRaw("Vertical"));
+        moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+
+        //Shooting Behaviour
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            Shoot();
+        }
     }
 
     private void FixedUpdate()
@@ -35,6 +46,8 @@ public class Player_Controller : MonoBehaviour
 
         //SMOOOOTH CAMERA FOLLOW
         CameraFollow();
+
+
     }
 
 
@@ -67,5 +80,12 @@ public class Player_Controller : MonoBehaviour
         Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
         Vector3 smoothedPosition = Vector3.Lerp(mainCamera.transform.position, desiredPosition, cameraMovementFollowUpSpeed);
         mainCamera.transform.position = smoothedPosition;
+    }
+
+    void Shoot()
+    {
+        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.identity);
+        Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
+        bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
     }
 }
