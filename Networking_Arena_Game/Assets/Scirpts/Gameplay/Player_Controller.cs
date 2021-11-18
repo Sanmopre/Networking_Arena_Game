@@ -30,8 +30,7 @@ public class Player_Controller : MonoBehaviour
 
     void Update()
     {
-        //Get input//
-        moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+        GetMoveInput();
 
         //Shooting Behaviour
         if (Input.GetMouseButtonDown(0))
@@ -61,6 +60,16 @@ public class Player_Controller : MonoBehaviour
 
     }
 
+    void GetMoveInput()
+    {
+        //moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+        
+        float xInput = Input.GetAxisRaw("Horizontal");
+        float zInput = Input.GetAxisRaw("Vertical");
+        
+        moveInput.x = xInput + zInput;                                                              // This is a workaround to the movement vs camera problem.
+        moveInput.z = zInput - xInput;
+    }
 
     void MovePlayer() 
     {
