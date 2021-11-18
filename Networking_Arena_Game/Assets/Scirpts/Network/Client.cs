@@ -26,6 +26,7 @@ public class Client : MonoBehaviour
         RECV_ID_CONF,
         SET_REMOTE,
         CONNECTED,
+        DISCONNECTED_IN,
         DISCONNECTED
     }
     SetUpState setUp = SetUpState.SEND_ID_DATA;
@@ -63,7 +64,7 @@ public class Client : MonoBehaviour
                         break;
                     }
 
-                    string message = Encoding.UTF8.GetString(received);
+                    string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
                     if (message == "registered" || message == "logged in")
                     {
                         Debug.Log("Succesfully " + message + "!");
@@ -88,7 +89,8 @@ public class Client : MonoBehaviour
                         }
                         else
                         {
-
+                            Debug.Log("Unknown response from the server.");
+                            setUp = SetUpState.SET_ID_DATA;
                         }
                     }
                 }
@@ -99,7 +101,7 @@ public class Client : MonoBehaviour
                     byte[] received = Receive();
                     if (received == null)
                     {
-                        setUp = SetUpState.DISCONNECTED;
+                        setUp = SetUpState.DISCONNECTED_IN;
                         break;
                     }
                     if (received.Length == 0)
@@ -107,6 +109,12 @@ public class Client : MonoBehaviour
 
                     Debug.Log(Encoding.UTF8.GetString(received));
                 }
+                break;
+            case SetUpState.DISCONNECTED_IN:
+                toServer.Send(new byte[0]);
+                toServer.Close();
+
+                setUp = SetUpState.DISCONNECTED;
                 break;
             case SetUpState.DISCONNECTED:
                 break;
@@ -167,5 +175,12 @@ public class Client : MonoBehaviour
         return recvBuffer;
     }
 
-    // TODO: OnDestroy() and testing
+    private void OnDestroy()
+    {
+        if (setUp == SetUpState.DISCONNECTED)
+            return;
+
+        toServer.Send(new byte[0]);
+        toServer.Close();
+    }
 }

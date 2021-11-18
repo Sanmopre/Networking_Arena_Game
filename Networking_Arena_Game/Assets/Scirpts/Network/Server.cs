@@ -29,6 +29,7 @@ public class Server : MonoBehaviour
 
             state = State.UNINTERESTED;
         }
+
         ~Client()
         {
             Disconnect();
@@ -204,5 +205,9 @@ public class Server : MonoBehaviour
         return null;
     }
 
-    // TODO: OnDestroy() and testing
+    private void OnDestroy()
+    {
+        listener.Close();
+        clients.Clear();
+    }
 }
