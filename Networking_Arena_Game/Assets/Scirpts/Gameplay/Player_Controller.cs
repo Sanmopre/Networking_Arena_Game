@@ -4,13 +4,20 @@ using UnityEngine;
 
 public class Player_Controller : MonoBehaviour
 {
-    public float movementSpeed;
     private Rigidbody myRigidbody;
     public Camera mainCamera;
     public Vector3 cameraOffset;
     public float cameraMovementFollowUpSpeed;
 
+    // Movement Vars
+    public float movementSpeed;
     private Vector3 moveInput;
+    
+    // --- Dash Vars
+    public float dashCooldown;
+    public float dashDuration = 0.5f;
+    private bool dashInCooldown = false;
+    private float dashCooldownCount = 0.0f;
 
     //Shooting variables
     public Transform canonPosition;
@@ -66,9 +73,40 @@ public class Player_Controller : MonoBehaviour
         
         float xInput = Input.GetAxisRaw("Horizontal");
         float zInput = Input.GetAxisRaw("Vertical");
+
+        GetDashInput(xInput, zInput);
         
         moveInput.x = xInput + zInput;                                                              // This is a workaround to the movement vs camera problem.
         moveInput.z = zInput - xInput;
+    }
+
+    void GetDashInput(ref float xInput, ref float zInput)
+    {
+        if (!dashInCooldown)
+        {
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.Space))
+            {   
+                if (Input.GetAxisRaw("Horizontal") != 0.0f)
+                {
+                    xInput *= 2;
+                }
+                if (Input.GetAxisRaw("Vertical") != 0.0f)
+                {
+                    zInput *= 2;
+                }
+
+                dashInCooldown = true;
+            }
+        }
+        else
+        {
+            dashCooldownCount += Time.deltaTime;
+            if (dashCooldownCount >= dashCooldown)
+            {
+                dashCooldownCount = 0.0f;
+                dashInCooldown = false;
+            }
+        }
     }
 
     void MovePlayer() 
