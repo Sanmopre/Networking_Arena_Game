@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 using System;
 using System.Net;
@@ -15,9 +16,9 @@ public class Client : MonoBehaviour
     Socket toServer = null;
     EndPoint remoteAddress = null;
 
-    public bool toRegister;
-    public string username;
-    public string password;
+    bool toRegister;
+    string username;
+    string password;
 
     enum SetUpState
     {
@@ -29,7 +30,7 @@ public class Client : MonoBehaviour
         DISCONNECTED_IN,
         DISCONNECTED
     }
-    SetUpState setUp = SetUpState.SEND_ID_DATA;
+    SetUpState setUp = SetUpState.SET_ID_DATA;
 
     void Start()
     {
@@ -45,7 +46,6 @@ public class Client : MonoBehaviour
         switch (setUp)
         {
             case SetUpState.SET_ID_DATA:
-                setUp = SetUpState.SEND_ID_DATA;
                 break;
             case SetUpState.SEND_ID_DATA:
                 char type = 'l';
@@ -183,4 +183,49 @@ public class Client : MonoBehaviour
         toServer.Send(new byte[0]);
         toServer.Close();
     }
+
+    // --- UI ---
+    public void InputUsername(string username)
+    {
+        this.username = username;
+    }
+
+    public void InputPassword(string password)
+    {
+        this.password = password;
+    }
+
+    public void LogIn()
+    {
+        if (CheckValidName(username))
+        {
+            toRegister = false;
+            setUp = SetUpState.SEND_ID_DATA;
+        }
+        else
+        {
+            Debug.Log("This name contains a forviden character -> ' '");
+        }
+    }
+
+    public void Register()
+    {
+        if (CheckValidName(username))
+        {
+            toRegister = true;
+            setUp = SetUpState.SEND_ID_DATA;
+        }
+        else
+        {
+            Debug.Log("This name contains a forviden character -> ' '");
+        }
+    }
+
+    bool CheckValidName(string name)
+    {
+        if (name.Contains(" "))
+            return false;
+        return true;
+    }
+    // ---
 }

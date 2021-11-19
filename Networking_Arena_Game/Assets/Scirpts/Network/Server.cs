@@ -94,7 +94,6 @@ public class Server : MonoBehaviour
             {
                 string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
 
-                char type = message[0];
                 int separator = message.IndexOf(' ');
                 if (separator != -1)
                 {
@@ -102,7 +101,7 @@ public class Server : MonoBehaviour
                     string password = message.Substring(separator + 1);
                     int index = 0;
                     Client client = FindClientByName(name, ref index);
-                    if (received[0] == 'r')
+                    if (message[0] == 'r')
                     {
                         if (client == null)
                         {
@@ -113,7 +112,7 @@ public class Server : MonoBehaviour
                         else
                             Send(listener, fromAddress, Encoding.UTF8.GetBytes("rename"));
                     }
-                    else if (received[0] == 'l')
+                    else if (message[0] == 'l')
                     {
                         if (client == null)
                             Send(listener, fromAddress, Encoding.UTF8.GetBytes("unknown"));
