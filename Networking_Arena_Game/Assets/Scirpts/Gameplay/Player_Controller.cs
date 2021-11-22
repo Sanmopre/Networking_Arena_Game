@@ -74,7 +74,7 @@ public class Player_Controller : MonoBehaviour
         float xInput = Input.GetAxisRaw("Horizontal");
         float zInput = Input.GetAxisRaw("Vertical");
 
-        GetDashInput(xInput, zInput);
+        GetDashInput(ref xInput,ref zInput);
         
         moveInput.x = xInput + zInput;                                                              // This is a workaround to the movement vs camera problem.
         moveInput.z = zInput - xInput;
