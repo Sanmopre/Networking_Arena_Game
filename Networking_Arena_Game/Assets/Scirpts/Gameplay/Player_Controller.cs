@@ -12,12 +12,14 @@ public class Player_Controller : MonoBehaviour
     // Movement Vars
     public float movementSpeed;
     private Vector3 moveInput;
-    
-    // --- Dash Vars
-    public float dashCooldown;
-    public float dashDuration = 0.5f;
+
+    //Dash
+    public float dashCooldown = 4.0f;
+    public float dashDuration = 1.0f;
+    public float dashForce = 50.0f;
+    private bool inDash = false;
     private bool dashInCooldown = false;
-    private float dashCooldownCount = 0.0f;
+    private float dashCounter = 0.0f;
 
     //Shooting variables
     public Transform canonPosition;
@@ -38,7 +40,23 @@ public class Player_Controller : MonoBehaviour
     void Update()
     {
         GetMoveInput();
+        ShootingInput();
+        DashCountersLogic();
+    }
+    private void FixedUpdate()
+    {
+        //Player movment
+        MovePlayer();
 
+        //Player rotation
+        transform.LookAt(GetPlayerPointToLook());
+
+        //SMOOOOTH CAMERA FOLLOW
+        CameraFollow();
+    }
+
+    private void ShootingInput() 
+    {
         //Shooting Behaviour
         if (Input.GetMouseButtonDown(0))
         {
@@ -54,63 +72,36 @@ public class Player_Controller : MonoBehaviour
         }
     }
 
-    private void FixedUpdate()
+    private void Dash(Vector3 dashDirection) 
     {
-        //Player movment
-        MovePlayer();
+        myRigidbody.AddForce(dashDirection, ForceMode.Impulse);
+        dashInCooldown = true;
+        inDash = true;
+        dashCounter = 0.0f;
+    }
 
-        //Player rotation
-        transform.LookAt(GetPlayerPointToLook());
+    private void DashCountersLogic() 
+    {
+        dashCounter += Time.deltaTime;
+        if(dashCounter > dashDuration)
+            inDash = false;
 
-        //SMOOOOTH CAMERA FOLLOW
-        CameraFollow();
-
+        if (dashCounter > dashCooldown)
+            dashInCooldown = false;
     }
 
     void GetMoveInput()
     {
-        //moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
-        
-        float xInput = Input.GetAxisRaw("Horizontal");
-        float zInput = Input.GetAxisRaw("Vertical");
-
-        GetDashInput(ref xInput,ref zInput);
-        
-        moveInput.x = xInput + zInput;                                                              // This is a workaround to the movement vs camera problem.
-        moveInput.z = zInput - xInput;
-    }
-
-    void GetDashInput(ref float xInput, ref float zInput)
-    {
-        if (!dashInCooldown)
+        moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+        if (Input.GetKeyDown(KeyCode.Space) && dashInCooldown == false)
         {
-            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.Space))
-            {   
-                if (Input.GetAxisRaw("Horizontal") != 0.0f)
-                {
-                    xInput *= 2;
-                }
-                if (Input.GetAxisRaw("Vertical") != 0.0f)
-                {
-                    zInput *= 2;
-                }
-
-                dashInCooldown = true;
-            }
-        }
-        else
-        {
-            dashCooldownCount += Time.deltaTime;
-            if (dashCooldownCount >= dashCooldown)
-            {
-                dashCooldownCount = 0.0f;
-                dashInCooldown = false;
-            }
+            Dash(moveInput * dashForce * 100);
         }
     }
 
     void MovePlayer() 
     {
+        if(inDash == false)
         myRigidbody.velocity = moveInput * movementSpeed;
     }
 

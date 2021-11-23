@@ -593,13 +593,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 244727084}
-  m_LocalRotation: {x: 0.4964001, y: 0.32275194, z: -0.20561564, w: 0.77919215}
+  m_LocalRotation: {x: 0.53729963, y: 0, z: 0, w: 0.8433915}
   m_LocalPosition: {x: -9.5, y: 32, z: -7.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: 65, y: 45, z: 0}
+  m_LocalEulerAnglesHint: {x: 65, y: 0, z: 0}
 --- !u!124 &244727088
 Behaviour:
   m_ObjectHideFlags: 0
@@ -1971,7 +1971,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 662738415}
   serializedVersion: 2
-  m_Mass: 10
+  m_Mass: 100
   m_Drag: 0
   m_AngularDrag: 0.05
   m_UseGravity: 1
@@ -1992,11 +1992,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 244727086}
-  cameraOffset: {x: 15, y: 40, z: 15}
-  cameraMovementFollowUpSpeed: 0.225
+  cameraOffset: {x: 0, y: 40, z: 15}
+  cameraMovementFollowUpSpeed: 0.175
   movementSpeed: 30
-  dashCooldown: 0
-  dashDuration: 0.5
+  dashCooldown: 2
+  dashDuration: 0.15
+  dashForce: 80
   canonPosition: {fileID: 968506049}
   bulletPrefab: {fileID: 4832174139182581250, guid: 64b43f0ba5f58d243868804417ccf965, type: 3}
   bulletForce: 170
