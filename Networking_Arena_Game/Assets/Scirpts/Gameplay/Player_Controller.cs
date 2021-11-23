@@ -74,7 +74,15 @@ public class Player_Controller : MonoBehaviour
 
     private void Dash(Vector3 dashDirection) 
     {
-        myRigidbody.AddForce(dashDirection, ForceMode.Impulse);
+        //diagonal force correction
+        if(dashDirection.x != 0 && dashDirection.z != 0) 
+        { 
+            myRigidbody.AddForce(dashDirection / 2, ForceMode.Impulse);
+        }
+        else
+        {
+            myRigidbody.AddForce(dashDirection, ForceMode.Impulse);
+        }
         dashInCooldown = true;
         inDash = true;
         dashCounter = 0.0f;
@@ -102,7 +110,20 @@ public class Player_Controller : MonoBehaviour
     void MovePlayer() 
     {
         if(inDash == false)
-        myRigidbody.velocity = moveInput * movementSpeed;
+        {
+            //DIAGONAL MOVEMENT CORRECTION (NUT SURE)
+            /*
+            if (moveInput.x != 0 && moveInput.z != 0)
+            {
+                myRigidbody.velocity = moveInput/ 1.5f * movementSpeed;
+            }
+            else 
+            {
+                myRigidbody.velocity = moveInput * movementSpeed;
+            }*/
+            myRigidbody.velocity = moveInput * movementSpeed;
+        }
+
     }
 
     Vector3 GetPlayerPointToLook() 
