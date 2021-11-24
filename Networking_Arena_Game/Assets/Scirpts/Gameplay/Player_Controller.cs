@@ -112,16 +112,16 @@ public class Player_Controller : MonoBehaviour
         if(inDash == false)
         {
             //DIAGONAL MOVEMENT CORRECTION (NUT SURE)
-            /*
+            
             if (moveInput.x != 0 && moveInput.z != 0)
             {
-                myRigidbody.velocity = moveInput/ 1.5f * movementSpeed;
+                myRigidbody.velocity = moveInput/ 1.4f * movementSpeed;
             }
             else 
             {
                 myRigidbody.velocity = moveInput * movementSpeed;
-            }*/
-            myRigidbody.velocity = moveInput * movementSpeed;
+            
+            }
         }
 
     }
