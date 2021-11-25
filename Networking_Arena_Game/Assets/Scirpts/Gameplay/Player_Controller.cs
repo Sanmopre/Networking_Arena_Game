@@ -34,7 +34,8 @@ public class Player_Controller : MonoBehaviour
 
     //Animator
     private Animator animator;
-    float lookAndMoveAngle;
+    Vector3 crossProduct = new Vector3();
+    //float lookAndMoveAngle;
 
     void Start()
     {
@@ -141,7 +142,12 @@ public class Player_Controller : MonoBehaviour
         //The function below will return the degrees between the point to look and the movement input so we can 
         // properly define the corresponding animation, the last parameter is the one the other two revolve around.
 
-        lookAndMoveAngle = Vector3.SignedAngle(pointToLook, moveInput, Vector3.up);
+        //lookAndMoveAngle = Vector3.SignedAngle(moveInput.normalized, pointToLook.normalized, gameObject.transform.up);
+
+
+        //Calculate the cross product between the point to look and the movement input so we can 
+        //properly define the corresponding animation based on the direction the player is looking
+        Vector3 crossProduct = Vector3.Cross(moveInput, pointToLook);
 
         //Animation state machine
         if (moveInput == Vector3.zero)
@@ -149,27 +155,32 @@ public class Player_Controller : MonoBehaviour
             animator.SetInteger("Run", 0);
             return;
         }
-        if (moveInput.z != 0 && lookAndMoveAngle >= 0)
+        //Run Forward
+        if (moveInput.z != 0 && crossProduct.y > 0)
         {
             animator.SetInteger("Run", 1);
             return;
         }
-        else if(moveInput.z != 0 && lookAndMoveAngle <= 0)
+        //Run Backwards
+        else if (moveInput.z != 0 && crossProduct.y < 0)
         {
             animator.SetInteger("Run", 2);
             return;
         }
-        if (moveInput.x != 0 && lookAndMoveAngle >= 0)
+        //Run right
+        if (moveInput.x != 0 && crossProduct.y < 0)
         {
             animator.SetInteger("Run", 3);
         }
-        else if (moveInput.x != 0 && lookAndMoveAngle <= 0)
+        //Run left
+        else if (moveInput.x != 0 && crossProduct.y > 0)
         {
             animator.SetInteger("Run", 4);
         }
     }
 
-    Vector3 GetPlayerPointToLook() 
+
+        Vector3 GetPlayerPointToLook() 
     {
         //Ray to mouse position for rotation
         Ray cameraRay = mainCamera.ScreenPointToRay(Input.mousePosition);
