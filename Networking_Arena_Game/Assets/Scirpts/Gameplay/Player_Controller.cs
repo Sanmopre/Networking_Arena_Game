@@ -11,7 +11,8 @@ public class Player_Controller : MonoBehaviour
 
     // Movement Vars
     public float movementSpeed;
-    private Vector3 moveInput;
+    private Vector3 moveInput = new Vector3();
+    Vector3 pointToLook = new Vector3();
 
     //Dash
     public float dashCooldown = 4.0f;
@@ -31,9 +32,14 @@ public class Player_Controller : MonoBehaviour
     private GameObject Instance;
     private LaserBehaviour LaserScript;
 
+    //Animator
+    private Animator animator;
+    float lookAndMoveAngle;
+
     void Start()
     {
         myRigidbody = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
     }
 
 
@@ -42,11 +48,16 @@ public class Player_Controller : MonoBehaviour
         GetMoveInput();
         ShootingInput();
         DashCountersLogic();
+
+       
     }
     private void FixedUpdate()
     {
         //Player movment
         MovePlayer();
+
+        //Animation Logic
+        AnimatePlayer();
 
         //Player rotation
         transform.LookAt(GetPlayerPointToLook());
@@ -125,6 +136,38 @@ public class Player_Controller : MonoBehaviour
         }
 
     }
+    void AnimatePlayer()
+    {
+        //The function below will return the degrees between the point to look and the movement input so we can 
+        // properly define the corresponding animation, the last parameter is the one the other two revolve around.
+
+        lookAndMoveAngle = Vector3.SignedAngle(pointToLook, moveInput, Vector3.up);
+
+        //Animation state machine
+        if (moveInput == Vector3.zero)
+        {
+            animator.SetInteger("Run", 0);
+            return;
+        }
+        if (moveInput.z != 0 && lookAndMoveAngle >= 0)
+        {
+            animator.SetInteger("Run", 1);
+            return;
+        }
+        else if(moveInput.z != 0 && lookAndMoveAngle <= 0)
+        {
+            animator.SetInteger("Run", 2);
+            return;
+        }
+        if (moveInput.x != 0 && lookAndMoveAngle >= 0)
+        {
+            animator.SetInteger("Run", 3);
+        }
+        else if (moveInput.x != 0 && lookAndMoveAngle <= 0)
+        {
+            animator.SetInteger("Run", 4);
+        }
+    }
 
     Vector3 GetPlayerPointToLook() 
     {
@@ -133,7 +176,7 @@ public class Player_Controller : MonoBehaviour
         //Intersection with plane
         Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
         float rayLenght;
-        Vector3 pointToLook = new Vector3();
+        //Vector3 pointToLook = new Vector3();
        
         if (groundPlane.Raycast(cameraRay, out rayLenght))
         {
