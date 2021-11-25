@@ -27,10 +27,16 @@ public class Client : MonoBehaviour
         RECV_ID_CONF,
         SET_REMOTE,
         CONNECTED,
-        DISCONNECTED_IN,
+        DISCONNECTING,
         DISCONNECTED
     }
     SetUpState setUp = SetUpState.SET_ID_DATA;
+
+    // --- UI ---
+    public Main_Menu_Behaviour menuScript = null;
+    public Text errorLogText = null;
+    public Text menuNameText = null;
+    // ---
 
     void Start()
     {
@@ -61,12 +67,15 @@ public class Client : MonoBehaviour
                     if (received == null)
                     {
                         setUp = SetUpState.DISCONNECTED;
+
                         break;
                     }
 
                     string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
                     if (message == "registered" || message == "logged in")
                     {
+                        IdentificationSuccess();
+
                         Debug.Log("Succesfully " + message + "!");
                         setUp = SetUpState.CONNECTED;
                     }
@@ -74,22 +83,22 @@ public class Client : MonoBehaviour
                     {
                         if (message == "rename")
                         {
-                            Debug.Log("The name you chose to register is already in use.");
+                            Log("The name you chose to register is already in use.");
                             setUp = SetUpState.SET_ID_DATA;
                         }
                         else if (message == "unknown")
                         {
-                            Debug.Log("The username does not exist. If you are new go register!");
+                            Log("The username does not exist. If you are new go register!");
                             setUp = SetUpState.SET_ID_DATA;
                         }
                         else if (message == "wrong")
                         {
-                            Debug.Log("Wrong password.");
+                            Log("Wrong password.");
                             setUp = SetUpState.SET_ID_DATA;
                         }
                         else
                         {
-                            Debug.Log("Unknown response from the server.");
+                            Log("Unknown response from the server.");
                             setUp = SetUpState.SET_ID_DATA;
                         }
                     }
@@ -101,7 +110,7 @@ public class Client : MonoBehaviour
                     byte[] received = Receive();
                     if (received == null)
                     {
-                        setUp = SetUpState.DISCONNECTED_IN;
+                        setUp = SetUpState.DISCONNECTED;
                         break;
                     }
                     if (received.Length == 0)
@@ -110,13 +119,23 @@ public class Client : MonoBehaviour
                     Debug.Log(Encoding.UTF8.GetString(received));
                 }
                 break;
-            case SetUpState.DISCONNECTED_IN:
-                toServer.Send(new byte[0]);
-                toServer.Close();
+            case SetUpState.DISCONNECTING:
+                if (toServer.Poll(0, SelectMode.SelectRead))
+                {
+                    byte[] received = Receive();
+                    if (received == null)
+                    {
+                        setUp = SetUpState.DISCONNECTED;
+                        break;
+                    }
+                    if (received.Length == 0)
+                        break;
+                }
 
-                setUp = SetUpState.DISCONNECTED;
                 break;
             case SetUpState.DISCONNECTED:
+                BackToIdentification();
+                setUp = SetUpState.SET_ID_DATA;
                 break;
         }
     }
@@ -125,7 +144,7 @@ public class Client : MonoBehaviour
     {
         if (toSend.Length > MAX_BUFFER)
         {
-            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
+            Log("Client Send Error: Message larger than " + MAX_BUFFER);
             return false;
         }    
 
@@ -135,7 +154,7 @@ public class Client : MonoBehaviour
         }
         catch (SocketException error)
         {
-            Debug.Log("Client Send Error: " + error.Message);
+            Log("Client Send Error: " + error.Message);
             return false;
         }
         return true;
@@ -153,7 +172,7 @@ public class Client : MonoBehaviour
         }
         catch (SocketException error)
         {
-            Debug.Log("Client Receive Error: " + error.Message);
+            Log("Client Receive Error: " + error.Message);
             return null;
         }
 
@@ -162,13 +181,13 @@ public class Client : MonoBehaviour
                 remoteAddress = from;
             else
             {
-                Debug.Log("Client Receive Error: Received a message from an unknown address");
+                Log("Client Receive Error: Received a message from an unknown address");
                 return new byte[0];
             }
 
         if (bytesRecv == 0)
         {
-            Debug.Log("Server Disconnected");
+            Log("Server Disconnected");
             return null;
         }
 
@@ -180,7 +199,8 @@ public class Client : MonoBehaviour
         if (setUp == SetUpState.DISCONNECTED)
             return;
 
-        toServer.Send(new byte[0]);
+        if (setUp != SetUpState.DISCONNECTING)
+            toServer.Send(new byte[0]);
         toServer.Close();
     }
 
@@ -204,7 +224,7 @@ public class Client : MonoBehaviour
         }
         else
         {
-            Debug.Log("This name contains a forviden character -> ' '");
+            Log("This name contains a forviden character -> ' '");
         }
     }
 
@@ -217,8 +237,18 @@ public class Client : MonoBehaviour
         }
         else
         {
-            Debug.Log("This name contains a forviden character -> ' '");
+            Log("This name contains a forviden character -> ' '");
         }
+    }
+    public void LogOut()
+    {
+        Send(new byte[0]);
+        setUp = SetUpState.DISCONNECTING;
+    }
+
+    public void RequestQuickMatch()
+    {
+        Send(Encoding.UTF8.GetBytes("quickmatch"));
     }
 
     bool CheckValidName(string name)
@@ -226,6 +256,29 @@ public class Client : MonoBehaviour
         if (name.Contains(" "))
             return false;
         return true;
+    }
+
+    void Log(string toLog)
+    {
+        Debug.Log(toLog);
+        if (errorLogText != null)
+            errorLogText.text = toLog;
+    }
+
+    void IdentificationSuccess()
+    {
+        if (menuScript != null)
+            menuScript.Log_In();
+        if (menuNameText != null)
+            menuNameText.text = username;
+
+        Log("");
+    }
+
+    void BackToIdentification()
+    {
+        if (menuScript != null)
+            menuScript.Log_Out();
     }
     // ---
 }

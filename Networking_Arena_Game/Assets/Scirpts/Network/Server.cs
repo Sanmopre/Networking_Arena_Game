@@ -37,6 +37,7 @@ public class Server : MonoBehaviour
 
         public string name = null;
         public string password = null;
+        public int lobbyID = 0;
 
         public enum State
         {
@@ -75,7 +76,9 @@ public class Server : MonoBehaviour
             state = State.DISCONNECTED;
         }
     }
+
     List<Client> clients = new List<Client>();
+    List<int> lobbies = new List<int>();
 
     void Start()
     {
@@ -134,6 +137,32 @@ public class Server : MonoBehaviour
                         }
                     }
                 }
+            }
+        }
+
+        for (int index = 0; index < clients.Count; ++index)
+        {
+            Client client = clients[index];
+            if (client.GetSocket().Poll(0, SelectMode.SelectRead))
+            {
+                EndPoint from = client.GetRemoteAddress();
+                byte[] received = Receive(client.GetSocket(), ref from);
+                if (received == null)
+                {
+                    Send(client.GetSocket(), client.GetRemoteAddress(), new byte[0]);
+                    client.Disconnect();
+                    clients[index] = client;
+                    continue;
+                }
+                if (received.Length == 0)
+                    continue;
+
+                string message = Encoding.UTF8.GetString(received);
+                if (message == "quickmatch")
+                {
+                    // TODO: MatchMaking
+                }
+                Debug.Log(Encoding.UTF8.GetString(received));
             }
         }
     }
