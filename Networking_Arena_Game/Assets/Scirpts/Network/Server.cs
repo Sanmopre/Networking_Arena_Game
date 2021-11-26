@@ -54,16 +54,18 @@ public class Server : MonoBehaviour
         EndPoint remoteAddress = null;
         public EndPoint GetRemoteAddress() { return remoteAddress; }
 
-        public void Connect(EndPoint remoteAddress)
+        public bool Connect(EndPoint remoteAddress)
         {
             if (state != State.DISCONNECTED)
-                return;
+                return false;
 
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             socket.Blocking = false;
             socket.Bind(new IPEndPoint(IPAddress.Any, 0));
             this.remoteAddress = remoteAddress;
             state = State.UNINTERESTED;
+
+            return true;
         }
         public void Disconnect()
         {
@@ -123,9 +125,8 @@ public class Server : MonoBehaviour
                         {
                             if (password == client.password)
                             {
-                                if (client.GetState() == Client.State.DISCONNECTED)
+                                if (client.Connect(fromAddress))
                                 {
-                                    client.Connect(fromAddress);
                                     Send(client.GetSocket(), client.GetRemoteAddress(), Encoding.UTF8.GetBytes("logged in"));
                                     clients[index] = client;
                                 }
@@ -143,12 +144,16 @@ public class Server : MonoBehaviour
         for (int index = 0; index < clients.Count; ++index)
         {
             Client client = clients[index];
+            if (client.GetState() == Client.State.DISCONNECTED)
+                continue;
+
             if (client.GetSocket().Poll(0, SelectMode.SelectRead))
             {
                 EndPoint from = client.GetRemoteAddress();
                 byte[] received = Receive(client.GetSocket(), ref from);
                 if (received == null)
                 {
+                    Debug.Log("Server Client " + client.name + " disconnected!");
                     Send(client.GetSocket(), client.GetRemoteAddress(), new byte[0]);
                     client.Disconnect();
                     clients[index] = client;
@@ -171,7 +176,7 @@ public class Server : MonoBehaviour
     {
         if (toSend.Length > MAX_BUFFER)
         {
-            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
+            Debug.Log("Server Send Error: Message larger than " + MAX_BUFFER);
             return false;
         }
 
@@ -181,7 +186,7 @@ public class Server : MonoBehaviour
         }
         catch (SocketException error)
         {
-            Debug.Log("Client Send Error: " + error.Message);
+            Debug.Log("Server Send Error: " + error.Message);
             return false;
         }
         return true;
@@ -199,16 +204,16 @@ public class Server : MonoBehaviour
         }
         catch (SocketException error)
         {
-            Debug.Log("Client Receive Error: " + error.Message);
+            Debug.Log("Server Receive Error: " + error.Message);
             return null;
         }
 
-        if (from != toAddress)
+        if (from.ToString() != toAddress.ToString())
             if (setRemote)
                 toAddress = from;
             else
             {
-                Debug.Log("Client Receive Error: Received a message from an unknown address");
+                Debug.Log("Server Receive Error: Received a message from an unknown address");
                 return new byte[0];
             }
 

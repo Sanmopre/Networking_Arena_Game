@@ -57,6 +57,7 @@ public class Client : MonoBehaviour
                 char type = 'l';
                 if (toRegister)
                     type = 'r';
+                remoteAddress = serverAddress;
                 if (Send(Encoding.UTF8.GetBytes(type + username + " " + password)))
                     setUp = SetUpState.RECV_ID_CONF;
                 break;
@@ -96,6 +97,11 @@ public class Client : MonoBehaviour
                             Log("Wrong password.");
                             setUp = SetUpState.SET_ID_DATA;
                         }
+                        else if (message == "imposter")
+                        {
+                            Log("The server has deemed you SUS, get your imposter ass out of here!");
+                            setUp = SetUpState.SET_ID_DATA;
+                        }
                         else
                         {
                             Log("Unknown response from the server.");
@@ -111,6 +117,7 @@ public class Client : MonoBehaviour
                     if (received == null)
                     {
                         setUp = SetUpState.DISCONNECTED;
+
                         break;
                     }
                     if (received.Length == 0)
@@ -126,6 +133,7 @@ public class Client : MonoBehaviour
                     if (received == null)
                     {
                         setUp = SetUpState.DISCONNECTED;
+
                         break;
                     }
                     if (received.Length == 0)
@@ -144,7 +152,7 @@ public class Client : MonoBehaviour
     {
         if (toSend.Length > MAX_BUFFER)
         {
-            Log("Client Send Error: Message larger than " + MAX_BUFFER);
+            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
             return false;
         }    
 
@@ -154,7 +162,7 @@ public class Client : MonoBehaviour
         }
         catch (SocketException error)
         {
-            Log("Client Send Error: " + error.Message);
+            Debug.Log("Client Send Error: " + error.Message);
             return false;
         }
         return true;
@@ -172,22 +180,22 @@ public class Client : MonoBehaviour
         }
         catch (SocketException error)
         {
-            Log("Client Receive Error: " + error.Message);
+            Debug.Log("Client Receive Error: " + error.Message);
             return null;
         }
 
-        if (from != remoteAddress)
+        if (from.ToString() != remoteAddress.ToString())
             if (setRemote)
                 remoteAddress = from;
             else
             {
-                Log("Client Receive Error: Received a message from an unknown address");
+                Debug.Log("Client Receive Error: Received a message from an unknown address");
                 return new byte[0];
             }
 
         if (bytesRecv == 0)
         {
-            Log("Server Disconnected");
+            Debug.Log("Server Disconnected");
             return null;
         }
 
