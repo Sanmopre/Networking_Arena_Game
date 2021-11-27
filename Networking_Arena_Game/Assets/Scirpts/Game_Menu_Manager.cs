@@ -6,19 +6,20 @@ using UnityEngine.UI;
 public class Game_Menu_Manager : MonoBehaviour
 {
     public GameObject GameMenu;
-    public float initial_time = 90;
     public GameObject TextObject;
     private Text timerText;
+    private Game_Manager gameManager;
     private void Awake()
     {
         GameMenu.SetActive(false);
         timerText = TextObject.GetComponent<Text>();
+        gameManager = GameObject.Find("GameManager").GetComponent<Game_Manager>();
+
     }
 
     void Update()
     {
-        initial_time -= Time.deltaTime;
-        DisplayTime(initial_time);
+        DisplayTime(gameManager.initial_time);
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
