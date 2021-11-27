@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Game_Manager : MonoBehaviour
 {
+    //player structure
     public struct player
     {
         public int lives;
@@ -13,14 +14,22 @@ public class Game_Manager : MonoBehaviour
 
     //In seconds
     public float initial_time = 90;
-    public int numberOfLifes = 3;
+    public int numberOfLifes = 4;
     public int player_HP = 100;
     private bool gameStarted = false;
+
+    //players
     public player Player1;
     public player Player2;
     
     void Start()
     {
+        Player1.hp = player_HP;
+        Player2.hp = player_HP;
+
+        Player1.lives = numberOfLifes;
+        Player2.lives = numberOfLifes;
+
         gameStarted = true;
     }
 
