@@ -1,12 +1,13 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class Client : MonoBehaviour
 {
@@ -20,26 +21,50 @@ public class Client : MonoBehaviour
     string username;
     string password;
 
-    enum SetUpState
+    enum State
     {
         SET_ID_DATA,
         SEND_ID_DATA,
         RECV_ID_CONF,
         SET_REMOTE,
-        CONNECTED,
+        IN_MENU,
+        WAITING_FOR_MATCH,
+        IN_GAME,
         DISCONNECTING,
-        DISCONNECTED
+        DISCONNECTED,
+        REPLACED
     }
-    SetUpState setUp = SetUpState.SET_ID_DATA;
+    State state = State.SET_ID_DATA;
 
     // --- UI ---
+    [HideInInspector]
     public Main_Menu_Behaviour menuScript = null;
+    [HideInInspector]
     public Text errorLogText = null;
+    [HideInInspector]
     public Text menuNameText = null;
     // ---
 
     void Start()
     {
+        Client[] destObjects = UnityEngine.Object.FindObjectsOfType<Client>();
+        for (int i = 0; i < destObjects.Length; ++i)
+            if (destObjects[i] != this && destObjects[i].name == name)
+            {
+                destObjects[i].menuScript = FindCanvasObjectByName("Main_Menu").GetComponent<Main_Menu_Behaviour>();
+                destObjects[i].errorLogText = FindCanvasObjectByName("ErrorLogText").GetComponent<Text>();
+                destObjects[i].menuNameText = FindCanvasObjectByName("MenuNameText").GetComponent<Text>();
+
+                state = State.REPLACED;
+                Destroy(gameObject);
+                return;
+            }
+        DontDestroyOnLoad(gameObject);
+
+        menuScript = FindCanvasObjectByName("Main_Menu").GetComponent<Main_Menu_Behaviour>();
+        errorLogText = FindCanvasObjectByName("ErrorLogText").GetComponent<Text>();
+        menuNameText = FindCanvasObjectByName("MenuNameText").GetComponent<Text>();
+
         toServer = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         toServer.Blocking = false;
         toServer.Bind(new IPEndPoint(IPAddress.Any, 0));
@@ -49,25 +74,25 @@ public class Client : MonoBehaviour
 
     void Update()
     {
-        switch (setUp)
+        switch (state)
         {
-            case SetUpState.SET_ID_DATA:
+            case State.SET_ID_DATA:
                 break;
-            case SetUpState.SEND_ID_DATA:
+            case State.SEND_ID_DATA:
                 char type = 'l';
                 if (toRegister)
                     type = 'r';
                 remoteAddress = serverAddress;
                 if (Send(Encoding.UTF8.GetBytes(type + username + " " + password)))
-                    setUp = SetUpState.RECV_ID_CONF;
+                    state = State.RECV_ID_CONF;
                 break;
-            case SetUpState.RECV_ID_CONF:
+            case State.RECV_ID_CONF:
                 if (toServer.Poll(0, SelectMode.SelectRead))
                 {
                     byte[] received = Receive(true);
                     if (received == null)
                     {
-                        setUp = SetUpState.DISCONNECTED;
+                        state = State.DISCONNECTED;
 
                         break;
                     }
@@ -75,64 +100,87 @@ public class Client : MonoBehaviour
                     string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
                     if (message == "registered" || message == "logged in")
                     {
-                        IdentificationSuccess();
+                        LoadMainMenu();
 
                         Debug.Log("Succesfully " + message + "!");
-                        setUp = SetUpState.CONNECTED;
+                        state = State.IN_MENU;
                     }
                     else
                     {
                         if (message == "rename")
                         {
                             Log("The name you chose to register is already in use.");
-                            setUp = SetUpState.SET_ID_DATA;
+                            state = State.SET_ID_DATA;
                         }
                         else if (message == "unknown")
                         {
                             Log("The username does not exist. If you are new go register!");
-                            setUp = SetUpState.SET_ID_DATA;
+                            state = State.SET_ID_DATA;
                         }
                         else if (message == "wrong")
                         {
                             Log("Wrong password.");
-                            setUp = SetUpState.SET_ID_DATA;
+                            state = State.SET_ID_DATA;
                         }
                         else if (message == "imposter")
                         {
                             Log("The server has deemed you SUS, get your imposter ass out of here!");
-                            setUp = SetUpState.SET_ID_DATA;
+                            state = State.SET_ID_DATA;
                         }
                         else
                         {
                             Log("Unknown response from the server.");
-                            setUp = SetUpState.SET_ID_DATA;
+                            state = State.SET_ID_DATA;
                         }
                     }
                 }
                 break;
-            case SetUpState.CONNECTED:
+            case State.IN_MENU:
                 if (toServer.Poll(0, SelectMode.SelectRead))
                 {
                     byte[] received = Receive();
                     if (received == null)
                     {
-                        setUp = SetUpState.DISCONNECTED;
+                        state = State.DISCONNECTED;
 
                         break;
                     }
                     if (received.Length == 0)
                         break;
 
-                    Debug.Log(Encoding.UTF8.GetString(received));
+                    Debug.Log(Encoding.UTF8.GetString(received).TrimEnd('\0'));
                 }
                 break;
-            case SetUpState.DISCONNECTING:
+            case State.WAITING_FOR_MATCH:
                 if (toServer.Poll(0, SelectMode.SelectRead))
                 {
                     byte[] received = Receive();
                     if (received == null)
                     {
-                        setUp = SetUpState.DISCONNECTED;
+                        state = State.DISCONNECTED;
+
+                        break;
+                    }
+                    if (received.Length == 0)
+                        break;
+
+                    string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
+                    if (message == "match found")
+                        SceneManager.LoadScene("Game_Scene");
+                    else
+                    {
+                        state = State.IN_MENU;
+                        LoadMainMenu();
+                    }
+                }
+                break;
+            case State.DISCONNECTING:
+                if (toServer.Poll(0, SelectMode.SelectRead))
+                {
+                    byte[] received = Receive();
+                    if (received == null)
+                    {
+                        state = State.DISCONNECTED;
 
                         break;
                     }
@@ -141,13 +189,14 @@ public class Client : MonoBehaviour
                 }
 
                 break;
-            case SetUpState.DISCONNECTED:
-                BackToIdentification();
-                setUp = SetUpState.SET_ID_DATA;
+            case State.DISCONNECTED:
+                LoadIdentificationMenu();
+                state = State.SET_ID_DATA;
                 break;
         }
     }
 
+    // --- Socket ---
     bool Send(byte[] toSend)
     {
         if (toSend.Length > MAX_BUFFER)
@@ -201,34 +250,40 @@ public class Client : MonoBehaviour
 
         return recvBuffer;
     }
+    // --- !Socket ---
 
     private void OnDestroy()
     {
-        if (setUp == SetUpState.DISCONNECTED)
+        if (state == State.REPLACED || state == State.DISCONNECTED)
             return;
 
-        if (setUp != SetUpState.DISCONNECTING)
+        if (state != State.DISCONNECTING)
             toServer.Send(new byte[0]);
         toServer.Close();
     }
 
-    // --- UI ---
+    // --- UI(Menu) ---
     public void InputUsername(string username)
     {
-        this.username = username;
+        if (state == State.SET_ID_DATA)
+            this.username = username;
     }
 
     public void InputPassword(string password)
     {
-        this.password = password;
+        if (state == State.SET_ID_DATA)
+            this.password = password;
     }
 
     public void LogIn()
     {
+        if (state != State.SET_ID_DATA)
+            return;
+
         if (CheckValidName(username))
         {
             toRegister = false;
-            setUp = SetUpState.SEND_ID_DATA;
+            state = State.SEND_ID_DATA;
         }
         else
         {
@@ -238,10 +293,13 @@ public class Client : MonoBehaviour
 
     public void Register()
     {
+        if (state != State.SET_ID_DATA)
+            return;
+
         if (CheckValidName(username))
         {
             toRegister = true;
-            setUp = SetUpState.SEND_ID_DATA;
+            state = State.SEND_ID_DATA;
         }
         else
         {
@@ -250,13 +308,21 @@ public class Client : MonoBehaviour
     }
     public void LogOut()
     {
+        if (state != State.IN_MENU)
+            return;
+
         Send(new byte[0]);
-        setUp = SetUpState.DISCONNECTING;
+        state = State.DISCONNECTING;
     }
 
     public void RequestQuickMatch()
     {
+        if (state != State.IN_MENU)
+            return;
+
         Send(Encoding.UTF8.GetBytes("quickmatch"));
+        state = State.WAITING_FOR_MATCH;
+        menuScript.Quickplay_Button();
     }
 
     bool CheckValidName(string name)
@@ -266,27 +332,44 @@ public class Client : MonoBehaviour
         return true;
     }
 
-    void Log(string toLog)
+    void Log(string toLog, bool debug = true)
     {
-        Debug.Log(toLog);
+        if (debug)
+            Debug.Log(toLog);
         if (errorLogText != null)
             errorLogText.text = toLog;
     }
 
-    void IdentificationSuccess()
+    void LoadMainMenu()
     {
         if (menuScript != null)
             menuScript.Log_In();
         if (menuNameText != null)
             menuNameText.text = username;
 
-        Log("");
+        Log("", false);
     }
 
-    void BackToIdentification()
+    void LoadIdentificationMenu()
     {
         if (menuScript != null)
             menuScript.Log_Out();
     }
-    // ---
+    // --- !UI(Menu) ---
+
+    // --- WhyIsThisNecessaryUnityGetYourShitTogether ---
+    // Aparently the GameObject.Find([name]) function doesn't find inactive objects so ... here we are.
+    GameObject FindCanvasObjectByName(string name)
+    {
+        Transform[] transforms = GameObject.Find("Canvas").GetComponentsInChildren<Transform>(true);
+        foreach (Transform transform in transforms)
+        {
+            if (transform.name == name)
+            {
+                return transform.gameObject;
+            }
+        }
+        return null;
+    }
+    // --- !WhyIsThisNecessaryUnityGetYourShitTogether ---
 }

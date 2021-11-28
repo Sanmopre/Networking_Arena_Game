@@ -162,10 +162,12 @@ public class Server : MonoBehaviour
                 if (received.Length == 0)
                     continue;
 
-                string message = Encoding.UTF8.GetString(received);
+                string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
+                Debug.Log("Server Client " + client.name + " received: " + message);
                 if (message == "quickmatch")
                 {
                     // TODO: MatchMaking
+                    Send(client.GetSocket(), client.GetRemoteAddress(), Encoding.UTF8.GetBytes("match found"));
                 }
                 Debug.Log(Encoding.UTF8.GetString(received));
             }
