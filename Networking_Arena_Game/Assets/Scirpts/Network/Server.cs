@@ -13,10 +13,14 @@ public class Server : MonoBehaviour
 
     Socket listener = null;
 
-    class Client
+    public class Ref<T> where T : struct
     {
-        private Client() { }
+        public T value;
+    }
 
+    // --- Client ---
+    struct Client
+    {
         public Client(string name, string password, EndPoint remoteAddress)
         {
             this.name = name;
@@ -28,16 +32,13 @@ public class Server : MonoBehaviour
             this.remoteAddress = remoteAddress;
 
             state = State.UNINTERESTED;
+
+            lobbyID = -1;
         }
 
-        ~Client()
-        {
-            Disconnect();
-        }
-
-        public string name = null;
-        public string password = null;
-        public int lobbyID = 0;
+        public string name;
+        public string password;
+        public int lobbyID;
 
         public enum State
         {
@@ -46,41 +47,80 @@ public class Server : MonoBehaviour
             INTERESTED,
             IN_GAME
         }
-        State state = State.DISCONNECTED;
-        public State GetState() { return state; }
+        public State state;
 
-        Socket socket = null;
-        public Socket GetSocket() { return socket; }
-        EndPoint remoteAddress = null;
-        public EndPoint GetRemoteAddress() { return remoteAddress; }
-
-        public bool Connect(EndPoint remoteAddress)
-        {
-            if (state != State.DISCONNECTED)
-                return false;
-
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            socket.Blocking = false;
-            socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-            this.remoteAddress = remoteAddress;
-            state = State.UNINTERESTED;
-
-            return true;
-        }
-        public void Disconnect()
-        {
-            if (state == State.DISCONNECTED)
-                return;
-
-            socket.Close();
-            socket = null;
-            remoteAddress = null;
-            state = State.DISCONNECTED;
-        }
+        public Socket socket;
+        public EndPoint remoteAddress;
     }
 
-    List<Client> clients = new List<Client>();
-    List<int> lobbies = new List<int>();
+    bool ClientConnect(Ref<Client> client, EndPoint remoteAddress)
+    {
+        if (client.value.state != Client.State.DISCONNECTED)
+            return false;
+
+        client.value.socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        client.value.socket.Blocking = false;
+        client.value.socket.Bind(new IPEndPoint(IPAddress.Any, 0));
+        client.value.remoteAddress = remoteAddress;
+        client.value.state = Client.State.UNINTERESTED;
+
+        return true;
+    }
+
+    bool ClientEnterLobby(Ref<Client> client, int lobbyID)
+    {
+        if (client.value.state != Client.State.UNINTERESTED)
+            return false;
+
+        client.value.lobbyID = lobbyID;
+        client.value.state = Client.State.INTERESTED;
+
+        return true;
+    }
+
+    bool ClientInGame(Ref<Client> client)
+    {
+        if (client.value.state != Client.State.INTERESTED)
+            return false;
+
+        client.value.state = Client.State.IN_GAME;
+
+        return true;
+    }
+
+     void ClientDisconnect(Ref<Client> client)
+    {
+        if (client.value.state == Client.State.DISCONNECTED)
+            return;
+
+        client.value.socket.Send(new byte[0]);
+
+        client.value.socket.Close();
+        client.value.socket = null;
+        client.value.remoteAddress = null;
+        client.value.state = Client.State.DISCONNECTED;
+    }
+    // --- !Client ---
+
+    List<Ref<Client>> clients = new List<Ref<Client>>();
+    struct Lobby
+    {
+        public Lobby(int id)
+        {
+            this.id = id;
+            full = false;
+
+            player1 = null;
+            player2 = null;
+        }
+
+        public int id;
+        public bool full;
+
+        public Ref<Client> player1;
+        public Ref<Client> player2;
+    }
+    List<Ref<Lobby>> lobbies = new List<Ref<Lobby>>();
 
     void Start()
     {
@@ -105,14 +145,14 @@ public class Server : MonoBehaviour
                     string name = message.Substring(1, separator - 1);
                     string password = message.Substring(separator + 1);
                     int index = 0;
-                    Client client = FindClientByName(name, ref index);
+                    Ref<Client> client = FindClientByName(name, ref index);
                     if (message[0] == 'r')
                     {
                         if (client == null)
                         {
-                            Client newClient = new Client(name, password, fromAddress);
+                            Ref<Client> newClient = new Ref<Client> { value = new Client(name, password, fromAddress) };
                             clients.Add(newClient);
-                            Send(newClient.GetSocket(), newClient.GetRemoteAddress(), Encoding.UTF8.GetBytes("registered"));
+                            Send(newClient.value.socket, newClient.value.remoteAddress, Encoding.UTF8.GetBytes("registered"));
                         }
                         else
                             Send(listener, fromAddress, Encoding.UTF8.GetBytes("rename"));
@@ -123,13 +163,10 @@ public class Server : MonoBehaviour
                             Send(listener, fromAddress, Encoding.UTF8.GetBytes("unknown"));
                         else
                         {
-                            if (password == client.password)
+                            if (password == client.value.password)
                             {
-                                if (client.Connect(fromAddress))
-                                {
-                                    Send(client.GetSocket(), client.GetRemoteAddress(), Encoding.UTF8.GetBytes("logged in"));
-                                    clients[index] = client;
-                                }
+                                if (ClientConnect(client, fromAddress))
+                                    Send(client.value.socket, client.value.remoteAddress, Encoding.UTF8.GetBytes("logged in"));
                                 else
                                     Send(listener, fromAddress, Encoding.UTF8.GetBytes("imposter"));
                             }
@@ -143,33 +180,57 @@ public class Server : MonoBehaviour
 
         for (int index = 0; index < clients.Count; ++index)
         {
-            Client client = clients[index];
-            if (client.GetState() == Client.State.DISCONNECTED)
+            Ref<Client> client = clients[index];
+            if (client.value.state == Client.State.DISCONNECTED)
                 continue;
 
-            if (client.GetSocket().Poll(0, SelectMode.SelectRead))
+            if (client.value.socket.Poll(0, SelectMode.SelectRead))
             {
-                EndPoint from = client.GetRemoteAddress();
-                byte[] received = Receive(client.GetSocket(), ref from);
+                EndPoint from = client.value.remoteAddress;
+                byte[] received = Receive(client.value.socket, ref from);
                 if (received == null)
                 {
-                    Debug.Log("Server Client " + client.name + " disconnected!");
-                    Send(client.GetSocket(), client.GetRemoteAddress(), new byte[0]);
-                    client.Disconnect();
-                    clients[index] = client;
+                    Debug.Log("Server Client " + client.value.name + " disconnected!");
+                    Send(client.value.socket, client.value.remoteAddress, new byte[0]);
+                    ClientDisconnect(client);
                     continue;
                 }
                 if (received.Length == 0)
                     continue;
 
                 string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
-                Debug.Log("Server Client " + client.name + " received: " + message);
                 if (message == "quickmatch")
                 {
-                    // TODO: MatchMaking
-                    Send(client.GetSocket(), client.GetRemoteAddress(), Encoding.UTF8.GetBytes("match found"));
+                    // TODO: MATCHMAKING
+                    //int lobbyIndex = -1;
+                    //Ref<Lobby> lobby;
+                    //for (int i = 0; i < lobbies.Count; ++i)
+                    //{
+                    //    lobby = lobbies[i];
+                    //    if (lobby.AddPlayer())
+                    //    {
+                    //        lobbyIndex = i;
+                    //        client.value.lobbyID = lobby.GetID();
+                    //        lobbies[i] = lobby;
+                    //        Send(client.value.socket, client.value.remoteAddress, Encoding.UTF8.GetBytes("match found"));
+                    //        break;
+                    //    }
+                    //}
+                    //if (lobbyIndex == -1)
+                    //{
+                    //    int newID = 1;
+                    //    if (lobbies.Count != 0)
+                    //        newID = lobbies[lobbies.Count - 1].GetID() + 1;
+                    //
+                    //    client.value.lobbyID = newID;
+                    //    
+                    //    lobbies.Add(new Lobby(newID));
+                    //}
                 }
-                Debug.Log(Encoding.UTF8.GetString(received));
+                else
+                {
+                    Debug.Log(Encoding.UTF8.GetString(received));
+                }
             }
         }
     }
@@ -228,10 +289,10 @@ public class Server : MonoBehaviour
         return recvBuffer;
     }
 
-    Client FindClientByName(string name, ref int index)
+    Ref<Client> FindClientByName(string name, ref int index)
     {
         for (int i = 0; i < clients.Count; ++i)
-            if (clients[i].name == name)
+            if (clients[i].value.name == name)
             {
                 index = i;
                 return clients[i];
@@ -243,6 +304,8 @@ public class Server : MonoBehaviour
     private void OnDestroy()
     {
         listener.Close();
+        foreach (Ref<Client> client in clients)
+            ClientDisconnect(client);
         clients.Clear();
     }
 }
