@@ -49,8 +49,6 @@ public class Player_Controller : MonoBehaviour
         GetMoveInput();
         ShootingInput();
         DashCountersLogic();
-
-       
     }
     private void FixedUpdate()
     {
@@ -180,7 +178,7 @@ public class Player_Controller : MonoBehaviour
     }
 
 
-        Vector3 GetPlayerPointToLook() 
+    Vector3 GetPlayerPointToLook() 
     {
         //Ray to mouse position for rotation
         Ray cameraRay = mainCamera.ScreenPointToRay(Input.mousePosition);
