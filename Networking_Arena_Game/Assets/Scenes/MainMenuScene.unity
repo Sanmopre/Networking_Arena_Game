@@ -3901,6 +3901,10 @@ MonoBehaviour:
   Main_Menu: {fileID: 1434219576}
   Searching_Menu: {fileID: 1229032588}
   First_Menu: {fileID: 472519406}
+  listOfLobbies: []
+  parent_list: {fileID: 338782593}
+  lists_per_page: 2
+  lobbies_distance_UI: 2
 --- !u!1 &1462064653
 GameObject:
   m_ObjectHideFlags: 0

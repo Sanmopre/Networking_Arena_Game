@@ -10,6 +10,7 @@ public class Main_Menu_Behaviour : MonoBehaviour
     public GameObject Searching_Menu;
     public GameObject First_Menu;
     public GameObject[] listOfLobbies;
+    public GameObject parent_list;
 
     public int lists_per_page;
     public float lobbies_distance_UI;
@@ -38,6 +39,7 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Main_Menu.SetActive(false);
         Searching_Menu.SetActive(false);
         First_Menu.SetActive(false);
+        DisplayList(current_page);
     }
 
     public void Options_Button() 
@@ -100,8 +102,37 @@ public class Main_Menu_Behaviour : MonoBehaviour
         for(int i = 0; i < lists_per_page; i++) 
         {
             Vector3 position = new Vector3(0,i * lobbies_distance_UI, 0);
-            Instantiate(listOfLobbies[i + list_page * lists_per_page], position, Quaternion.identity);
-            //under table parent gameobject
+            var myLobby = Instantiate(listOfLobbies[i + list_page * lists_per_page], position, Quaternion.identity);
+            myLobby.transform.parent = parent_list.transform;
+        }
+    }
+
+    public void NextPage()
+    {
+        CleanRoom();
+        current_page++;
+        if (current_page > number_of_pages)
+        {
+            current_page = number_of_pages;
+        }
+        DisplayList(current_page);
+    }
+    public void PreviousPage() 
+    {
+        CleanRoom();
+        current_page--;
+        if (current_page < 0)
+        {
+            current_page = 0;
+        }
+        DisplayList(current_page);
+    }
+
+    void CleanRoom()
+    {
+        foreach (Transform child in parent_list.transform)
+        {
+            GameObject.Destroy(child.gameObject);
         }
     }
 }
