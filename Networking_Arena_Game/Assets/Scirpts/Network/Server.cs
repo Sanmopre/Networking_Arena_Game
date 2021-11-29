@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
+
 public class Server : MonoBehaviour
 {
     const int MAX_BUFFER = 1300;
@@ -33,12 +34,12 @@ public class Server : MonoBehaviour
 
             state = State.UNINTERESTED;
 
-            lobbyID = -1;
+            lobby = null;
         }
 
         public string name;
         public string password;
-        public int lobbyID;
+        public Ref<Lobby> lobby;
 
         public enum State
         {
@@ -67,17 +68,6 @@ public class Server : MonoBehaviour
         return true;
     }
 
-    bool ClientEnterLobby(Ref<Client> client, int lobbyID)
-    {
-        if (client.value.state != Client.State.UNINTERESTED)
-            return false;
-
-        client.value.lobbyID = lobbyID;
-        client.value.state = Client.State.INTERESTED;
-
-        return true;
-    }
-
     bool ClientInGame(Ref<Client> client)
     {
         if (client.value.state != Client.State.INTERESTED)
@@ -101,8 +91,9 @@ public class Server : MonoBehaviour
         client.value.state = Client.State.DISCONNECTED;
     }
     // --- !Client ---
-
     List<Ref<Client>> clients = new List<Ref<Client>>();
+
+    // --- Lobby ---
     struct Lobby
     {
         public Lobby(int id)
@@ -120,6 +111,33 @@ public class Server : MonoBehaviour
         public Ref<Client> player1;
         public Ref<Client> player2;
     }
+
+    bool LobbyAddPlayer(Ref<Lobby> lobby, Ref<Client> client)
+    {
+        if (lobby.value.full || client.value.state != Client.State.UNINTERESTED)
+            return false;
+
+        client.value.lobby = lobby;
+        if (lobby.value.player1 == null)
+        {
+            client.value.state = Client.State.INTERESTED;
+
+            lobby.value.player1 = client;
+        }
+        else
+        {
+            lobby.value.player2 = client;
+
+            lobby.value.player1.value.state = Client.State.IN_GAME;
+            lobby.value.player2.value.state = Client.State.IN_GAME;
+
+            lobby.value.full = true;
+        }
+
+        return true;
+    }
+
+    // --- !Lobby ---
     List<Ref<Lobby>> lobbies = new List<Ref<Lobby>>();
 
     void Start()
@@ -201,31 +219,32 @@ public class Server : MonoBehaviour
                 string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
                 if (message == "quickmatch")
                 {
-                    // TODO: MATCHMAKING
-                    //int lobbyIndex = -1;
-                    //Ref<Lobby> lobby;
-                    //for (int i = 0; i < lobbies.Count; ++i)
-                    //{
-                    //    lobby = lobbies[i];
-                    //    if (lobby.AddPlayer())
-                    //    {
-                    //        lobbyIndex = i;
-                    //        client.value.lobbyID = lobby.GetID();
-                    //        lobbies[i] = lobby;
-                    //        Send(client.value.socket, client.value.remoteAddress, Encoding.UTF8.GetBytes("match found"));
-                    //        break;
-                    //    }
-                    //}
-                    //if (lobbyIndex == -1)
-                    //{
-                    //    int newID = 1;
-                    //    if (lobbies.Count != 0)
-                    //        newID = lobbies[lobbies.Count - 1].GetID() + 1;
-                    //
-                    //    client.value.lobbyID = newID;
-                    //    
-                    //    lobbies.Add(new Lobby(newID));
-                    //}
+                    Ref<Lobby> lobby = null;
+                    for (int i = 0; i < lobbies.Count; ++i)
+                    {
+                        lobby = lobbies[i];
+                        if (LobbyAddPlayer(lobby, client))
+                        {
+                            Send(lobby.value.player1.value.socket, lobby.value.player1.value.remoteAddress, Encoding.UTF8.GetBytes("match found"));
+                            Send(lobby.value.player2.value.socket, lobby.value.player2.value.remoteAddress, Encoding.UTF8.GetBytes("match found"));
+                            break;
+                        }
+                        lobby = null;
+                    }
+                    if (lobby == null)
+                    {
+                        int newID = 1;
+                        if (lobbies.Count != 0)
+                            newID = lobbies[lobbies.Count - 1].value.id + 1;
+
+                        lobbies.Add(new Ref<Lobby> { value = new Lobby(newID) });
+
+                        if (!LobbyAddPlayer(lobbies[lobbies.Count - 1], client))
+                        {
+                            Send(client.value.socket, client.value.remoteAddress, Encoding.UTF8.GetBytes("matchmaking error"));
+                            lobbies.RemoveAt(lobbies.Count - 1);
+                        }
+                    }
                 }
                 else
                 {
