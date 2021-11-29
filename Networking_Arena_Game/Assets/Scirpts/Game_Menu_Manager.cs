@@ -16,6 +16,9 @@ public class Game_Menu_Manager : MonoBehaviour
     public Vector3 canvasOffSet;   
     public GameObject UIPlayer1LiveCount;
     public GameObject UIPlayer2LiveCount;
+
+    public float distance_offset_x;
+    public float distance_offset_y;
     private void Awake()
     {
         GameMenu.SetActive(false);
@@ -25,7 +28,7 @@ public class Game_Menu_Manager : MonoBehaviour
 
     private void Start()
     {
-        ManageHealthPlayerLifesUI();
+        UpdatePlayerLifesUI();
     }
 
     void Update()
@@ -37,6 +40,7 @@ public class Game_Menu_Manager : MonoBehaviour
             Debug.Log("Escape key was pressed");
             GameMenu.SetActive(!GameMenu.activeSelf);
         }
+
     }
 
     public void Resume_Button() 
@@ -76,17 +80,27 @@ public class Game_Menu_Manager : MonoBehaviour
         timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
-    void ManageHealthPlayerLifesUI() 
+    public void UpdatePlayerLifesUI() 
     {
-        for(int i = 0; i < gameManager.Player1.lives; i++) 
+        foreach (Transform child in UIPlayer1LiveCount.transform)
         {
-            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(canvasOffSet.x -126 - (i * 48), canvasOffSet.y + 285, canvasOffSet.z ), Quaternion.identity);
+            GameObject.Destroy(child.gameObject);
+        }
+
+        foreach (Transform child in UIPlayer2LiveCount.transform)
+        {
+            GameObject.Destroy(child.gameObject);
+        }
+
+        for (int i = 0; i < gameManager.Player1.lives; i++) 
+        {
+            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(canvasOffSet.x -126 - (i * distance_offset_x), canvasOffSet.y + distance_offset_y, canvasOffSet.z ), Quaternion.identity);
             new_ui.transform.parent = UIPlayer1LiveCount.transform;
         }
 
         for (int i = 0; i < gameManager.Player2.lives; i++)
         {
-            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(canvasOffSet.x + 126 + (i * 48), canvasOffSet.y + 285, canvasOffSet.z), Quaternion.identity);
+            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(canvasOffSet.x + 126 + (i * distance_offset_x), canvasOffSet.y + distance_offset_y, canvasOffSet.z), Quaternion.identity);
             new_ui.transform.parent = UIPlayer2LiveCount.transform;
         }
     }

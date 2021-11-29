@@ -21,6 +21,8 @@ public class Game_Manager : MonoBehaviour
     //players
     public player Player1;
     public player Player2;
+
+    public Game_Menu_Manager menu_manager;
     
     void Start()
     {
@@ -54,6 +56,7 @@ public class Game_Manager : MonoBehaviour
                 if (Player1.hp >= 0)
                 {
                     Player1.lives -= 1;
+                    menu_manager.UpdatePlayerLifesUI();
                     CheckIfWin();
                 }
                 break;
@@ -62,6 +65,7 @@ public class Game_Manager : MonoBehaviour
                 if (Player2.hp >= 0)
                 {
                     Player2.lives -= 1;
+                    menu_manager.UpdatePlayerLifesUI();
                     CheckIfWin();
                 }
                 break;
