@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 public class Client : MonoBehaviour
 {
     const int MAX_BUFFER = 1300;
+    byte[] DISCONNECT = new byte[1]; 
     EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6969);
 
     Socket toServer = null;
@@ -221,7 +222,7 @@ public class Client : MonoBehaviour
     {
         byte[] recvBuffer = new byte[MAX_BUFFER];
         EndPoint from = new IPEndPoint(IPAddress.None, 0);
-        int bytesRecv = 0;
+        int bytesRecv;
 
         try
         {
@@ -242,7 +243,7 @@ public class Client : MonoBehaviour
                 return new byte[0];
             }
 
-        if (bytesRecv == 0)
+        if (bytesRecv == 1)
         {
             Debug.Log("Server Disconnected");
             return null;
@@ -258,7 +259,7 @@ public class Client : MonoBehaviour
             return;
 
         if (state != State.DISCONNECTING)
-            toServer.Send(new byte[0]);
+            Send(DISCONNECT);
         toServer.Close();
     }
 
@@ -311,7 +312,7 @@ public class Client : MonoBehaviour
         if (state != State.IN_MENU)
             return;
 
-        Send(new byte[0]);
+        Send(DISCONNECT);
         state = State.DISCONNECTING;
     }
 
@@ -363,12 +364,9 @@ public class Client : MonoBehaviour
     {
         Transform[] transforms = GameObject.Find("Canvas").GetComponentsInChildren<Transform>(true);
         foreach (Transform transform in transforms)
-        {
             if (transform.name == name)
-            {
                 return transform.gameObject;
-            }
-        }
+
         return null;
     }
     // --- !WhyIsThisNecessaryUnityGetYourShitTogether ---

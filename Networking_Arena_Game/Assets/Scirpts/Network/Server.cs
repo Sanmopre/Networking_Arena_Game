@@ -11,6 +11,7 @@ using System.Text;
 public class Server : MonoBehaviour
 {
     const int MAX_BUFFER = 1300;
+    byte[] DISCONNECT = new byte[1];
 
     Socket listener = null;
 
@@ -83,7 +84,7 @@ public class Server : MonoBehaviour
         if (client.value.state == Client.State.DISCONNECTED)
             return;
 
-        client.value.socket.Send(new byte[0]);
+        Send(client.value.socket, client.value.remoteAddress, DISCONNECT);
 
         client.value.socket.Close();
         client.value.socket = null;
@@ -137,6 +138,28 @@ public class Server : MonoBehaviour
         return true;
     }
 
+    void LobbyDismatle(Ref<Lobby> lobby, Ref<Client> disconnected = null)
+    {
+        if (lobby.value.player1 != null)
+        {
+            if (lobby.value.player1 != disconnected)
+            {
+                lobby.value.player1.value.state = Client.State.UNINTERESTED;
+                Send(lobby.value.player1.value.socket, lobby.value.player1.value.remoteAddress, Encoding.UTF8.GetBytes("exit lobby"));
+            }
+            lobby.value.player1.value.lobby = null;
+        }
+        if (lobby.value.player2 != null)
+        {
+            if (lobby.value.player2 != disconnected)
+            {
+                lobby.value.player2.value.state = Client.State.UNINTERESTED;
+                Send(lobby.value.player2.value.socket, lobby.value.player2.value.remoteAddress, Encoding.UTF8.GetBytes("exit lobby"));
+            }
+            lobby.value.player2.value.lobby = null;
+        }
+        lobbies.Remove(lobby);
+    }
     // --- !Lobby ---
     List<Ref<Lobby>> lobbies = new List<Ref<Lobby>>();
 
@@ -149,6 +172,27 @@ public class Server : MonoBehaviour
 
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Return))
+        {
+            Debug.Log("Clients:");
+            foreach (Ref<Client> client in clients)
+                Debug.Log(client.value.name + " - " + client.value.state.ToString());
+            Debug.Log("---");
+        }
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Debug.Log("Lobbies:");
+            foreach (Ref<Lobby> lobby in lobbies)
+            {
+                string n1 = "empty", n2 = "empty";
+                if (lobby.value.player1 != null)
+                    n1 = lobby.value.player1.value.name;
+                if (lobby.value.player2 != null)
+                    n2 = lobby.value.player2.value.name;
+                Debug.Log(lobby.value.id + " - P1: " + n1 + " - P2: " + n2);
+            }
+            Debug.Log("---");
+        }
         if (listener.Poll(0, SelectMode.SelectRead))
         {
             EndPoint fromAddress = new IPEndPoint(IPAddress.None, 0);
@@ -209,7 +253,6 @@ public class Server : MonoBehaviour
                 if (received == null)
                 {
                     Debug.Log("Server Client " + client.value.name + " disconnected!");
-                    Send(client.value.socket, client.value.remoteAddress, new byte[0]);
                     ClientDisconnect(client);
                     continue;
                 }
@@ -299,7 +342,7 @@ public class Server : MonoBehaviour
                 return new byte[0];
             }
 
-        if (bytesRecv == 0)
+        if (bytesRecv == 1)
         {
             Debug.Log("Server Disconnected");
             return null;

@@ -9,85 +9,64 @@ using System.Threading;
 
 using UnityEngine;
 
-public class Networking : MonoBehaviour
+public class UDP : MonoBehaviour
 {
+    [HideInInspector]
+    public readonly int MAX_BUFFER = 1300;
+    [HideInInspector]
+    public readonly byte[] DISCONNECT = new byte[1];
+
+    Socket thisSocket = null;
+    EndPoint remoteAddress = null;
+
     struct Message
     {
-        public Message(int id, byte[] data)
+        public Message(byte[] data)
         {
-            this.id = id;
+            id = Time.realtimeSinceStartup;
             this.data = data;
-            startTime = Time.realtimeSinceStartup;
         }
 
         public bool IsTimedOut()
         {
-            if (Time.realtimeSinceStartup > startTime + 2)
+            if (Time.realtimeSinceStartup > id + 2)
                 return true;
             return false;
         }
 
-        public int id;
+        float id;
+        public float GetID() { return id; }
         public byte[] data;
-        float startTime;
     }
-
-    Socket thisSocket = null;
-    IPEndPoint thisAddress = null;
-
-    EndPoint remoteAddress = null;
-
-    int messageID = 0;
-    int lastRecvID = 0;
-
-    List<Message> toConfirm = new List<Message>();
-    
+    List<Message> notAcknoledged = new List<Message>();
 
     public void Start()
     {
         thisSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         thisSocket.Blocking = false;
-        thisAddress = new IPEndPoint(IPAddress.Any, 0);
+        IPEndPoint thisAddress = new IPEndPoint(IPAddress.Any, 0);
 
         thisSocket.Bind(thisAddress);
     }
 
     public void Update()
     {
-        if(thisSocket.Poll(0, SelectMode.SelectRead))
-        {
-            byte[] recvBuffer = new byte[1500];
-            EndPoint recvIP = OnPacketReceived(ref recvBuffer);
-            if (recvIP != null)
+        for (int i = 0; i < notAcknoledged.Count; ++i)
+            if (notAcknoledged[i].IsTimedOut())
             {
-                if (remoteAddress == null)
-                    recvIP = remoteAddress;
-                else if (remoteAddress != recvIP)
-                {
-                    // dunno, do sum
-                }
-                // Send to GameManager
-            }
-        }
-
-        for (int i = 0; i < toConfirm.Count; ++i)
-            if (toConfirm[i].IsTimedOut())
-            {
-                SendPacket(toConfirm[i].data);
-                toConfirm.RemoveAt(i);
+                Resend(notAcknoledged[i]);
+                notAcknoledged.RemoveAt(i);
                 --i;
                 continue;
             }
     }
 
-    void StartConnection(EndPoint toAddress)
+    void SetRemoteAddress(EndPoint toAddress)
     {
-        if (remoteAddress != null)
-            Disconnect();
         remoteAddress = toAddress;
     }
 
-    EndPoint OnPacketReceived(ref byte[] inputPacket)
+    EndPoint Receive(ref byte[] inputPacket) // TODO: REMAKE
     {
         EndPoint from = new IPEndPoint(IPAddress.None, 0);
 
@@ -102,7 +81,6 @@ public class Networking : MonoBehaviour
         }
         if (bytesRecv == 0)
         {
-            Disconnect();
             return null;
         }
 
@@ -110,16 +88,16 @@ public class Networking : MonoBehaviour
         int recvID = BitConverter.ToInt32(inputPacket, 0);
         if (bytesRecv == iSize)
         {
-            for (int i = 0; i < toConfirm.Count; ++i)
-                if (toConfirm[i].id == recvID)
+            for (int i = 0; i < notAcknoledged.Count; ++i)
+                if (notAcknoledged[i].GetID() == recvID)
                 {
-                    toConfirm.RemoveAt(i);
+                    notAcknoledged.RemoveAt(i);
                     break;
                 }
             return null;
         }
 
-        lastRecvID = recvID;
+        //lastRecvID = recvID;
         byte[] toReceive = new byte[inputPacket.Length - iSize];
         for (int i = 0; i < toReceive.Length; ++i)
             toReceive[i] = inputPacket[i + iSize];
@@ -128,15 +106,30 @@ public class Networking : MonoBehaviour
         return from;
     }
 
-    void SendPacket(byte[] outputPacket)
+    bool Send(string output)
     {
+        if (output.Length > MAX_BUFFER)
+        {
+            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
+            return false;
+        }
         if (remoteAddress == null)
         {
             ReportError("Networking Send Error: Remote Address is null");
-            return;
+            return false;
         }
 
-        byte[] header = BitConverter.GetBytes(messageID);
+        byte[] outputPacket;
+        if (output != null)
+        {
+            output.TrimEnd('\0');
+            outputPacket = Encoding.UTF8.GetBytes(output);
+        }
+        else
+            outputPacket = DISCONNECT;
+        Message message = new Message(outputPacket);
+
+        byte[] header = BitConverter.GetBytes(message.GetID());
         byte[] toSend = new byte[header.Length + outputPacket.Length];
         header.CopyTo(toSend, 0);
         outputPacket.CopyTo(toSend, header.Length);
@@ -148,31 +141,38 @@ public class Networking : MonoBehaviour
         catch (SocketException error)
         {
             ReportError("Networking Send Error: " + error.Message);
-            Disconnect();
-            return;
+            return false;
         }
 
-        toConfirm.Add(new Message(messageID, outputPacket));
-        ++messageID;
-    }
-
-    bool IsConnected()
-    {
-        if (remoteAddress == null)
-            return false;
+        notAcknoledged.Add(message);
         return true;
     }
 
-    void Disconnect()
+    bool Resend(Message outputMessage)
     {
         if (remoteAddress == null)
-            return;
+        {
+            ReportError("Networking Send Error: Remote Address is null");
+            return false;
+        }
 
-        SendPacket(new byte[0]);
-        remoteAddress = null;
+        try
+        {
+            thisSocket.SendTo(outputMessage.data, remoteAddress);
+        }
+        catch (SocketException error)
+        {
+            ReportError("Networking Send Error: " + error.Message);
+            return false;
+        }
 
-        messageID = 0;
-        lastRecvID = 0;
+        notAcknoledged.Add(outputMessage);
+        return true;
+    }
+
+    void Close()
+    {
+        thisSocket.Close();
     }
 
     void ReportError(string error)
@@ -182,7 +182,6 @@ public class Networking : MonoBehaviour
 
     private void OnDestroy()
     {
-        Disconnect();
         thisSocket.Close();
     }
 }
