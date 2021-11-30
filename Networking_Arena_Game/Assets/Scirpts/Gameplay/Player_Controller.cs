@@ -38,7 +38,6 @@ public class Player_Controller : MonoBehaviour
 
     //Animator
     private Animator animator;
-    Vector3 crossProduct = new Vector3();
     //float lookAndMoveAngle;
 
     void Start()

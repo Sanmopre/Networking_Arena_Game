@@ -328,7 +328,7 @@ public class Client : MonoBehaviour
 
     bool CheckValidName(string name)
     {
-        if (name.Contains(" "))
+        if (name.Contains(" ") || name.Length == 0)
             return false;
         return true;
     }
