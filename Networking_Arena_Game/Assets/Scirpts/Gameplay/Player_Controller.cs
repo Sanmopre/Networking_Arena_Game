@@ -32,6 +32,10 @@ public class Player_Controller : MonoBehaviour
     private GameObject Instance;
     private LaserBehaviour LaserScript;
 
+    //Granade Attack
+    public GameObject grenadePrefab;
+    public float grenadeForce;
+
     //Animator
     private Animator animator;
     Vector3 crossProduct = new Vector3();
@@ -79,6 +83,10 @@ public class Player_Controller : MonoBehaviour
         if (Input.GetMouseButtonUp(1))
         {
             DestroyLaser();
+        }
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            ShootGranade();
         }
     }
 
@@ -185,7 +193,6 @@ public class Player_Controller : MonoBehaviour
         //Intersection with plane
         Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
         float rayLenght;
-        //Vector3 pointToLook = new Vector3();
        
         if (groundPlane.Raycast(cameraRay, out rayLenght))
         {
@@ -196,6 +203,17 @@ public class Player_Controller : MonoBehaviour
         //Adjustment
         return new Vector3(pointToLook.x, transform.position.y, pointToLook.z);
     }
+
+
+    void ShootGranade()
+    {
+        
+
+        GameObject grenade = Instantiate(grenadePrefab, canonPosition.position, Quaternion.identity);
+        grenade.GetComponent<GrenadeBehaviour>().SetTarget(pointToLook);
+    }
+
+   
 
     void CameraFollow() 
     {
