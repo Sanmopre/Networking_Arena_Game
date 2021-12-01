@@ -3542,6 +3542,9 @@ MonoBehaviour:
   bulletPrefab: {fileID: 4832174139182581250, guid: 64b43f0ba5f58d243868804417ccf965, type: 3}
   bulletForce: 170
   laserPrefab: {fileID: 1418158253269514, guid: 280b8b1393d77f148a8cbcfc7f36e116, type: 3}
+  grenadePrefab: {fileID: 6028146140949575064, guid: 9b0aa1688b81cb145827db637e430ab4, type: 3}
+  grenadeForce: 1.3
+  grenadeAngle: 15
 --- !u!95 &1463777477
 Animator:
   serializedVersion: 3

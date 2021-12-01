@@ -35,6 +35,7 @@ public class Player_Controller : MonoBehaviour
     //Granade Attack
     public GameObject grenadePrefab;
     public float grenadeForce;
+    public float grenadeAngle;
 
     //Animator
     private Animator animator;
@@ -206,14 +207,32 @@ public class Player_Controller : MonoBehaviour
 
     void ShootGranade()
     {
-        
+        //Get the X and Z target position
+        Vector3 targetXZ = new Vector3(pointToLook.x, 0.0f, pointToLook.z);
 
+        //Instantiate the grenade and set the correct orientation
         GameObject grenade = Instantiate(grenadePrefab, canonPosition.position, Quaternion.identity);
-        grenade.GetComponent<GrenadeBehaviour>().SetTarget(pointToLook);
+        grenade.gameObject.transform.LookAt(targetXZ);
+        Vector3 projectileXZPos = new Vector3(grenade.gameObject.transform.position.x, 0.0f, grenade.gameObject.transform.position.z);
+
+        //Variables to calculate the intial speed in an arc shot
+        float R = Vector3.Distance(projectileXZPos, targetXZ);
+        float G = Physics.gravity.y;
+        float tanAlpha = Mathf.Tan(grenadeAngle * Mathf.Deg2Rad);
+        float H = (targetXZ.y - grenade.gameObject.transform.position.y);
+
+        //Calculate initial speed required to land the grenade on the target object 
+        float Vz = Mathf.Sqrt(G * R * R / (2.0f * (H - R * tanAlpha)));
+        float Vy = tanAlpha * Vz;
+
+        //Create the velocity vector
+        Vector3 localVelocity = new Vector3(0f, Vy, Vz);
+        Vector3 globalVelocity = grenade.gameObject.transform.TransformDirection(localVelocity);
+
+        //Shoot the grenade
+        grenade.GetComponent<Rigidbody>().velocity = globalVelocity * grenadeForce;
+
     }
-
-   
-
     void CameraFollow() 
     {
         Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
