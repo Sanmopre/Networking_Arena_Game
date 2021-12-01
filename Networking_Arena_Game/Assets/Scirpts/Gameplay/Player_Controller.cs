@@ -39,6 +39,7 @@ public class Player_Controller : MonoBehaviour
 
     //Animator
     private Animator animator;
+    public float rotateThreshold;
     //float lookAndMoveAngle;
 
     void Start()
@@ -150,10 +151,11 @@ public class Player_Controller : MonoBehaviour
 
         //lookAndMoveAngle = Vector3.SignedAngle(moveInput.normalized, pointToLook.normalized, gameObject.transform.up);
 
-
         //Calculate the cross product between the point to look and the movement input so we can 
         //properly define the corresponding animation based on the direction the player is looking
-        Vector3 crossProduct = Vector3.Cross(moveInput, pointToLook);
+        //Vector3 crossProduct = Vector3.Cross(moveInput, transform.forward);
+
+        float dot = Vector3.Dot(moveInput, transform.forward);
 
         //Animation state machine
         if (moveInput == Vector3.zero)
@@ -161,28 +163,22 @@ public class Player_Controller : MonoBehaviour
             animator.SetInteger("Run", 0);
             return;
         }
-        //Run Forward
-        if (moveInput.z != 0 && crossProduct.y > 0)
+        if (moveInput.x != 0 || moveInput.z != 0)
         {
-            animator.SetInteger("Run", 1);
-            return;
+            //Run forward
+            if (dot > 1 - rotateThreshold && dot < 1 + rotateThreshold)
+                animator.SetInteger("Run", 1);
+            //Run backwards
+            if (dot > -1 - rotateThreshold && dot < -1 + rotateThreshold)
+                animator.SetInteger("Run", 2);
+            //Run right
+            if (dot > 0 - rotateThreshold && dot < 0 + rotateThreshold)
+                animator.SetInteger("Run", 3);
+            //Run left
+            if (dot > 0 - rotateThreshold && dot < 0 + rotateThreshold && moveInput.x > 0)
+                animator.SetInteger("Run", 4);
         }
-        //Run Backwards
-        else if (moveInput.z != 0 && crossProduct.y < 0)
-        {
-            animator.SetInteger("Run", 2);
-            return;
-        }
-        //Run right
-        if (moveInput.x != 0 && crossProduct.y < 0)
-        {
-            animator.SetInteger("Run", 3);
-        }
-        //Run left
-        else if (moveInput.x != 0 && crossProduct.y > 0)
-        {
-            animator.SetInteger("Run", 4);
-        }
+
     }
 
 
@@ -242,7 +238,8 @@ public class Player_Controller : MonoBehaviour
 
     void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position,Quaternion.Euler(canonPosition.forward));
+        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, bulletPrefab.transform.rotation);
+        //bullet.gameObject.transform.LookAt(pointToLook);
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
         bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
     }

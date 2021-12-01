@@ -3545,6 +3545,7 @@ MonoBehaviour:
   grenadePrefab: {fileID: 6028146140949575064, guid: 9b0aa1688b81cb145827db637e430ab4, type: 3}
   grenadeForce: 1.3
   grenadeAngle: 15
+  rotateThreshold: 0.5
 --- !u!95 &1463777477
 Animator:
   serializedVersion: 3
