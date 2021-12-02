@@ -15,11 +15,6 @@ public class Server : MonoBehaviour
 
     Socket listener = null;
 
-    public class Ref<T> where T : struct
-    {
-        public T value;
-    }
-
     // --- Client ---
     struct Client
     {
