@@ -36,6 +36,8 @@ public class Player_Controller : MonoBehaviour
     public GameObject grenadePrefab;
     public float grenadeForce;
     public float grenadeAngle;
+    public float grenadeCooldown;
+    private float grenadeTimer;
 
     //Animator
     private Animator animator;
@@ -46,6 +48,7 @@ public class Player_Controller : MonoBehaviour
     {
         myRigidbody = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+        grenadeTimer = grenadeCooldown;
     }
 
 
@@ -85,9 +88,15 @@ public class Player_Controller : MonoBehaviour
         {
             DestroyLaser();
         }
-        if (Input.GetKeyDown(KeyCode.F))
+       
+        if (Input.GetKeyDown(KeyCode.F) && grenadeTimer >= grenadeCooldown)
         {
             ShootGranade();
+            grenadeTimer = 0;
+        }
+        else 
+        {
+            grenadeTimer += Time.deltaTime;
         }
     }
 
@@ -238,7 +247,9 @@ public class Player_Controller : MonoBehaviour
 
     void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, bulletPrefab.transform.rotation);
+        //ISSUE:--> The bullet doesn'r rotate in the foward direction, it instanciate looking upwards.
+
+        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward));
         //bullet.gameObject.transform.LookAt(pointToLook);
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
         bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
