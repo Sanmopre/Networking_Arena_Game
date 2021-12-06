@@ -14,42 +14,42 @@ public class Test : MonoBehaviour
 
     public bool server = false;
 
-    string myName = "Server";
+    //string myName = "Server";
     string message = "FromServer";
 
     void Start()
     {
-        socket = gameObject.GetComponent<UDP>();
-
-        if (!server)
-        {
-            myName = "Client";
-            message = "FromClient";
-            socket.SetRemoteAddress(serverAddress);
-        }
-        else
-            socket.SetRemoteAddress(nullAddress);
+        //socket = gameObject.GetComponent<UDP>();
+        //
+        //if (!server)
+        //{
+        //    //myName = "Client";
+        //    message = "FromClient";
+        //    socket.SetRemoteAddress(serverAddress);
+        //}
+        //else
+        //    socket.SetRemoteAddress(nullAddress);
     }
-    int messagesSent = 0;
+    //int messagesSent = 0;
     public int messagesToSend = 25;
     void Update()
     {
-        while (socket.CanReceive())
-        {
-            string recv = socket.Receive(true);
-            if (recv == null)
-            {
-                Debug.Log(myName + " receive Error");
-                continue;
-            }
-            if (recv.Length == 0)
-                continue;
-        }
-        if (messagesSent < messagesToSend)
-        {
-            socket.Send(message);
-            ++messagesSent;
-        }
+        //while (socket.CanReceive())
+        //{
+        //    string recv = socket.Receive(true);
+        //    if (recv == null)
+        //    {
+        //        Debug.Log(myName + " receive Error");
+        //        continue;
+        //    }
+        //    if (recv.Length == 0)
+        //        continue;
+        //}
+        //if (messagesSent < messagesToSend)
+        //{
+        //    socket.Send(message);
+        //    ++messagesSent;
+        //}
     }
 
     private void OnDestroy()

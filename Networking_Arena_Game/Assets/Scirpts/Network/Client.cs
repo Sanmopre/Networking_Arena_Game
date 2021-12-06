@@ -11,16 +11,15 @@ using UnityEngine.SceneManagement;
 
 public class Client : MonoBehaviour
 {
-    const int MAX_BUFFER = 1300;
-    byte[] DISCONNECT = new byte[1]; 
     EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6969);
 
-    Socket toServer = null;
-    EndPoint remoteAddress = null;
+    UDP toServer = null;
 
     bool toRegister;
     string username;
     string password;
+
+    int notAcknowleged;
 
     enum State
     {
@@ -66,11 +65,8 @@ public class Client : MonoBehaviour
         errorLogText = FindCanvasObjectByName("ErrorLogText").GetComponent<Text>();
         menuNameText = FindCanvasObjectByName("MenuNameText").GetComponent<Text>();
 
-        toServer = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        toServer.Blocking = false;
-        toServer.Bind(new IPEndPoint(IPAddress.Any, 0));
-
-        remoteAddress = serverAddress;
+        toServer = gameObject.GetComponent<UDP>();
+        toServer.remoteAddress = serverAddress;
     }
 
     void Update()
@@ -83,110 +79,119 @@ public class Client : MonoBehaviour
                 char type = 'l';
                 if (toRegister)
                     type = 'r';
-                remoteAddress = serverAddress;
-                if (Send(Encoding.UTF8.GetBytes(type + username + " " + password)))
+                toServer.remoteAddress = serverAddress;
+                notAcknowleged = toServer.Send(type + username + " " + password);
+                if (notAcknowleged != -1)
                     state = State.RECV_ID_CONF;
                 break;
             case State.RECV_ID_CONF:
-                if (toServer.Poll(0, SelectMode.SelectRead))
+                while (toServer.CanReceive())
                 {
-                    byte[] received = Receive(true);
-                    if (received == null)
+                    string received = "";
+                    switch (toServer.Receive(ref received, true))
                     {
-                        state = State.DISCONNECTED;
+                        case UDP.RecvType.ERROR:
+                            continue;
+                        case UDP.RecvType.FIN:
+                            toServer.Close();
+                            state = State.DISCONNECTED;
+                            break;
+                        case UDP.RecvType.MESSAGE:
+                            Debug.Log("RECEIVED -> " + received);
+                            if (received == "registered" || received == "logged in")
+                            {
+                                LoadMainMenu();
 
-                        break;
-                    }
-
-                    string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
-                    if (message == "registered" || message == "logged in")
-                    {
-                        LoadMainMenu();
-
-                        Debug.Log("Succesfully " + message + "!");
-                        state = State.IN_MENU;
-                    }
-                    else
-                    {
-                        if (message == "rename")
-                        {
-                            Log("The name you chose to register is already in use.");
-                            state = State.SET_ID_DATA;
-                        }
-                        else if (message == "unknown")
-                        {
-                            Log("The username does not exist. If you are new go register!");
-                            state = State.SET_ID_DATA;
-                        }
-                        else if (message == "wrong")
-                        {
-                            Log("Wrong password.");
-                            state = State.SET_ID_DATA;
-                        }
-                        else if (message == "imposter")
-                        {
-                            Log("The server has deemed you SUS, get your imposter ass out of here!");
-                            state = State.SET_ID_DATA;
-                        }
-                        else
-                        {
-                            Log("Unknown response from the server.");
-                            state = State.SET_ID_DATA;
-                        }
+                                Debug.Log("Succesfully " + received + "!");
+                                state = State.IN_MENU;
+                            }
+                            else
+                            {
+                                if (received == "rename")
+                                {
+                                    Log("The name you chose to register is already in use.");
+                                    state = State.SET_ID_DATA;
+                                }
+                                else if (received == "unknown")
+                                {
+                                    Log("The username does not exist. If you are new go register!");
+                                    state = State.SET_ID_DATA;
+                                }
+                                else if (received == "wrong")
+                                {
+                                    Log("Wrong password.");
+                                    state = State.SET_ID_DATA;
+                                }
+                                else if (received == "imposter")
+                                {
+                                    Log("The server has deemed you SUS, get your imposter ass out of here!");
+                                    state = State.SET_ID_DATA;
+                                }
+                                else
+                                {
+                                    Log("Unknown response from the server.");
+                                    state = State.SET_ID_DATA;
+                                }
+                            }
+                            break;
                     }
                 }
                 break;
-            case State.IN_MENU:
-                if (toServer.Poll(0, SelectMode.SelectRead))
+            case State.IN_MENU: // TODO: FIX LOGOUT
+                while (toServer.CanReceive())
                 {
-                    byte[] received = Receive();
-                    if (received == null)
+                    string received = "";
+                    switch (toServer.Receive(ref received))
                     {
-                        state = State.DISCONNECTED;
-
-                        break;
+                        case UDP.RecvType.ERROR:
+                            continue;
+                        case UDP.RecvType.FIN:
+                            toServer.Close();
+                            state = State.DISCONNECTED;
+                            break;
+                        case UDP.RecvType.MESSAGE:
+                            Debug.Log(received);
+                            break;
                     }
-                    if (received.Length == 0)
-                        break;
-
-                    Debug.Log(Encoding.UTF8.GetString(received).TrimEnd('\0'));
                 }
                 break;
             case State.WAITING_FOR_MATCH:
-                if (toServer.Poll(0, SelectMode.SelectRead))
+                while (toServer.CanReceive())
                 {
-                    byte[] received = Receive();
-                    if (received == null)
+                    string received = "";
+                    switch (toServer.Receive(ref received))
                     {
-                        state = State.DISCONNECTED;
-
-                        break;
-                    }
-                    if (received.Length == 0)
-                        break;
-
-                    string message = Encoding.UTF8.GetString(received).TrimEnd('\0');
-                    if (message == "match found")
-                        SceneManager.LoadScene("Game_Scene");
-                    else
-                    {
-                        state = State.IN_MENU;
-                        LoadMainMenu();
+                        case UDP.RecvType.ERROR:
+                            continue;
+                        case UDP.RecvType.FIN:
+                            toServer.Close();
+                            state = State.DISCONNECTED;
+                            break;
+                        case UDP.RecvType.MESSAGE:
+                            if (received == "match found")
+                                SceneManager.LoadScene("Game_Scene");
+                            else
+                            {
+                                state = State.IN_MENU;
+                                LoadMainMenu();
+                            }
+                            break;
                     }
                 }
                 break;
             case State.DISCONNECTING:
-                if (toServer.Poll(0, SelectMode.SelectRead))
+                while (toServer.CanReceive())
                 {
-                    byte[] received = Receive();
-                    if (received == null)
+                    string received = "";
+                    switch (toServer.Receive(ref received))
                     {
-                        state = State.DISCONNECTED;
-
-                        break;
+                        case UDP.RecvType.ERROR:
+                            continue;
+                        case UDP.RecvType.FIN:
+                            toServer.Close();
+                            state = State.DISCONNECTED;
+                            break;
                     }
-                    if (received.Length == 0)
-                        break;
                 }
 
                 break;
@@ -197,69 +202,13 @@ public class Client : MonoBehaviour
         }
     }
 
-    // --- Socket ---
-    bool Send(byte[] toSend)
-    {
-        if (toSend.Length > MAX_BUFFER)
-        {
-            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
-            return false;
-        }    
-
-        try
-        {
-            toServer.SendTo(toSend, remoteAddress);
-        }
-        catch (SocketException error)
-        {
-            Debug.Log("Client Send Error: " + error.Message);
-            return false;
-        }
-        return true;
-    }
-
-    byte[] Receive(bool setRemote = false)
-    {
-        byte[] recvBuffer = new byte[MAX_BUFFER];
-        EndPoint from = new IPEndPoint(IPAddress.None, 0);
-        int bytesRecv;
-
-        try
-        {
-            bytesRecv = toServer.ReceiveFrom(recvBuffer, ref from);
-        }
-        catch (SocketException error)
-        {
-            Debug.Log("Client Receive Error: " + error.Message);
-            return null;
-        }
-
-        if (from.ToString() != remoteAddress.ToString())
-            if (setRemote)
-                remoteAddress = from;
-            else
-            {
-                Debug.Log("Client Receive Error: Received a message from an unknown address");
-                return new byte[0];
-            }
-
-        if (bytesRecv == 1)
-        {
-            Debug.Log("Server Disconnected");
-            return null;
-        }
-
-        return recvBuffer;
-    }
-    // --- !Socket ---
-
     private void OnDestroy()
     {
         if (state == State.REPLACED || state == State.DISCONNECTED)
             return;
 
         if (state != State.DISCONNECTING)
-            Send(DISCONNECT);
+            toServer.Send(null);
         toServer.Close();
     }
 
@@ -307,12 +256,13 @@ public class Client : MonoBehaviour
             Log("This name contains a forviden character -> ' '");
         }
     }
+
     public void LogOut()
     {
         if (state != State.IN_MENU)
             return;
 
-        Send(DISCONNECT);
+        toServer.Send(null);
         state = State.DISCONNECTING;
     }
 
@@ -321,7 +271,7 @@ public class Client : MonoBehaviour
         if (state != State.IN_MENU)
             return;
 
-        Send(Encoding.UTF8.GetBytes("quickmatch"));
+        toServer.Send("quickmatch");
         state = State.WAITING_FOR_MATCH;
         menuScript.Quickplay_Button();
     }

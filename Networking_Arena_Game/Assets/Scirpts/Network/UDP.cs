@@ -16,22 +16,85 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly int MAX_BUFFER = 1300;
     [HideInInspector]
+    static public readonly int MAX_RECV_IDS = 100;
+    [HideInInspector]
     static public readonly byte[] DISCONNECT = new byte[1];
     [HideInInspector]
     static public readonly float MSG_WAIT_TIME = 3.0f;
+    [HideInInspector]
+    static public readonly float SEND_RATE = 0.1f;
+    [HideInInspector]
+    static public readonly byte MESSAGE_SEPARATOR = Encoding.UTF8.GetBytes("\\")[0];
 
     Socket thisSocket = null;
-    EndPoint remoteAddress = null;
+    public EndPoint remoteAddress = null;
     int messageID = 0;
+
+    // --- Recv ---
+    public enum RecvType
+    {
+        MESSAGE,
+        FIN,
+        EMPTY,
+        ERROR
+    }
+    struct RecvPacket
+    {
+        public RecvPacket(int id, RecvType type, string message, EndPoint from)
+        {
+            this.id = id;
+            this.type = type;
+            this.message = message;
+            this.from = from;
+        }
+
+        public readonly int id;
+        public RecvType type;
+        public string message;
+        public EndPoint from;
+    }
+    List<RecvPacket> recvPackets = new List<RecvPacket>();
+    // --- !Recv ---
+
+    // --- Send ---
+    struct SendPacket
+    {
+        public SendPacket(byte[] message, EndPoint to)
+        {
+            this.message = message;
+            this.to = to;
+        }
+
+        public byte[] message;
+        public EndPoint to;
+    }
+
+    void AddSendPacket(byte[] message, EndPoint to)
+    {
+        currentBufferSize += message.Length + 1; // + 1 because of the separator
+        if (currentBufferSize >= MAX_BUFFER)
+        {
+            SendPackets();
+            currentBufferSize += message.Length + 1;
+        }
+
+        sendBuffer.Add(new SendPacket(message, to));
+    }
+
+    List<SendPacket> sendBuffer = new List<SendPacket>();
+    int currentBufferSize = 0;
+    float timeLastSent = 0.0f;
+    // --- !Send ---
 
     // --- Message ---
     struct Message
     {
-        public Message(int id, byte[] data)
+        public Message(int id, byte[] data, EndPoint from)
         {
             this.id = id;
             this.data = data;
             start = Time.realtimeSinceStartup;
+            this.from = from;
         }
 
         readonly int id;
@@ -39,6 +102,8 @@ public class UDP : MonoBehaviour
         public int GetID() { return id; }
         public byte[] data;
         public float start;
+
+        public EndPoint from;
     }
 
     bool MessageIsTimedOut(Ref<Message> message)
@@ -52,19 +117,36 @@ public class UDP : MonoBehaviour
     {
         message.value.start = Time.realtimeSinceStartup;
     }
-    // --- !Message ---
-    List<Ref<Message>> notAcknoledged = new List<Ref<Message>>();
 
+    public bool MessageIsAcknowleged(int id)
+    {
+        foreach(Ref<Message> message in notAcknowleged)
+            if (message.value.GetID() == id)
+                return false;
+        return true;
+    }
+
+    Ref<Message> GetMessage(int id)
+    {
+        foreach (Ref<Message> message in notAcknowleged)
+            if (message.value.GetID() == id)
+                return message;
+        return null;
+    }
+
+    List<Ref<Message>> notAcknowleged = new List<Ref<Message>>();
     int lastID = -1;
     List<int> receivedIDs = new List<int>();
+    // --- !Message ---
 
     public void Awake()
     {
         thisSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         thisSocket.Blocking = false;
         IPEndPoint thisAddress = new IPEndPoint(IPAddress.Any, port);
-
         thisSocket.Bind(thisAddress);
+
+        remoteAddress = new IPEndPoint(IPAddress.None, 0);
 
         // --- Shady stuffy ---
         thread = new Thread(SendMessages);
@@ -73,86 +155,73 @@ public class UDP : MonoBehaviour
 
     public void Update()
     {
-        for (int i = 0; i < notAcknoledged.Count; ++i)
-            if (MessageIsTimedOut(notAcknoledged[i]))
+        if (sendBuffer.Count > 0 && Time.realtimeSinceStartup >= timeLastSent + SEND_RATE)
+            SendPackets();
+        while (thisSocket.Poll(0, SelectMode.SelectRead))
+            ReceivePackets();
+
+        for (int i = 0; i < notAcknowleged.Count; ++i)
+            if (MessageIsTimedOut(notAcknowleged[i]))
             {
-                Resend(notAcknoledged[i]);
-                MessageRestartTimer(notAcknoledged[i]);
+                Resend(notAcknowleged[i]);
+                MessageRestartTimer(notAcknowleged[i]);
             }
     }
 
-    public void SetRemoteAddress(EndPoint toAddress)
+    public RecvType Receive(ref string message, bool setRemote = false)
     {
-        remoteAddress = toAddress;
-    }
+        if (recvPackets.Count == 0)
+            return RecvType.EMPTY;
 
-    public string Receive(bool setRemote = false)
-    {
-        byte[] inputPacket = new byte[MAX_BUFFER];
-        EndPoint from = new IPEndPoint(IPAddress.None, 0);
+        RecvPacket packet = recvPackets[0];
+        recvPackets.RemoveAt(0);
 
-        int bytesRecv;
-        try
-        {
-            bytesRecv = thisSocket.ReceiveFrom(inputPacket, ref from);
-        }
-        catch (SocketException error)
-        {
-            ReportError("Receive Error: " + error.Message);
-            return null;
-        }
-
-        if (from.ToString() != remoteAddress.ToString())
+        if (packet.from.ToString() != remoteAddress.ToString())
             if (setRemote)
-                remoteAddress = from;
+            {
+                Close();
+                remoteAddress = packet.from;
+            }
             else
             {
                 ReportError("Receive Error: Received a message from an unknown address");
-                return "";
+                return RecvType.EMPTY;
             }
 
-        if (bytesRecv == 1)
+        if (packet.id != -1)
         {
-            ReportError("Disconnected from server");
-            return null;
-        }
+            SendAcknowledgement(packet.id, packet.from);
 
-        int idSize = sizeof(int);
-        int recvID = BitConverter.ToInt32(inputPacket, 0);
-
-        if (bytesRecv != idSize) // check if it is an acknoledgement package
-        {
-            Debug.Log(name + " Received Message -> " + recvID);
-            if (recvID <= lastID)
-            {
-                SendAcknowledgement(recvID);
-                return "";
-            }
+            if (packet.id <= lastID)
+                return RecvType.EMPTY;
             for (int i = 0; i < receivedIDs.Count; ++i)
-                if (recvID == receivedIDs[i])
-                {
-                    SendAcknowledgement(recvID);
-                    return "";
-                }
+                if (packet.id == receivedIDs[i])
+                    return RecvType.EMPTY;
 
             if (receivedIDs.Count > 0)
             {
                 for (int i = 0; i < receivedIDs.Count; ++i)
                 {
-                    if (receivedIDs[i] > recvID)
+                    if (receivedIDs[i] > packet.id)
                     {
-                        receivedIDs.Insert(i, recvID);
+                        receivedIDs.Insert(i, packet.id);
                         break;
                     }
                     if (i == receivedIDs.Count - 1)
                     {
-                        receivedIDs.Add(recvID);
+                        receivedIDs.Add(packet.id);
                         break;
                     }
                 }
             }
             else
-                receivedIDs.Add(recvID);
+                receivedIDs.Add(packet.id);
+
+            while (receivedIDs.Count > MAX_RECV_IDS)
+            {
+                lastID = receivedIDs[0];
+                receivedIDs.RemoveAt(0);
+            }
 
             int nextID = receivedIDs[0];
             while (nextID - 1 == lastID)
@@ -165,41 +234,87 @@ public class UDP : MonoBehaviour
 
                 nextID = receivedIDs[0];
             }
-
-            SendAcknowledgement(recvID);
-        }
-        else
-        {
-            Debug.Log(name + " Acknowledged -> " + recvID);
-            for (int i = 0; i < notAcknoledged.Count; ++i)
-                if (notAcknoledged[i].value.GetID() == recvID)
-                {
-                    notAcknoledged.RemoveAt(i);
-                    break;
-                }
-            return "";
         }
 
-        byte[] toReceive = new byte[inputPacket.Length - idSize];
-        for (int i = 0; i < toReceive.Length; ++i)
-            toReceive[i] = inputPacket[i + idSize];
-
-        return Encoding.UTF8.GetString(toReceive).TrimEnd('\0');
+        message = packet.message;
+        return packet.type;
     }
 
-    public bool Send(string output)
+    void ReceivePackets()
     {
-        if (output.Length > MAX_BUFFER)
+        byte[] inputPacket = new byte[MAX_BUFFER];
+        EndPoint from = new IPEndPoint(IPAddress.None, 0);
+
+        int bytesRecv;
+        try
         {
-            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
-            return false;
+            bytesRecv = thisSocket.ReceiveFrom(inputPacket, ref from);
         }
-        if (remoteAddress == null)
+        catch (SocketException error)
         {
-            ReportError("Networking Send Error: Remote Address is null");
-            return false;
+            ReportError("Receive Error: " + error.Message);
+            recvPackets.Add(new RecvPacket(-1, RecvType.ERROR, null, from));
+            return;
         }
 
+        List<byte[]> messages = new List<byte[]>();
+        List<byte> currentMessage = new List<byte>();
+        for (int i = 0; i < bytesRecv; ++i)
+        {
+            if (inputPacket[i] == MESSAGE_SEPARATOR)
+            {
+                messages.Add(currentMessage.ToArray());
+                currentMessage.Clear();
+            }
+            else
+                currentMessage.Add(inputPacket[i]);
+        }
+
+        for (int m = 0; m < messages.Count; ++m)
+        {
+            byte[] message = messages[m];
+
+            int idSize = sizeof(int);
+            int recvID = BitConverter.ToInt32(message, 0);
+
+            if (message.Length != idSize) // check if it is an acknoledgement package
+            {
+                Debug.Log(name + " Received Message -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
+            }
+            else
+            {
+                Debug.Log(name + " Acknowledged -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
+                bool exit = false;
+                for (int i = 0; i < notAcknowleged.Count; ++i)
+                    if (notAcknowleged[i].value.GetID() == recvID)
+                    {
+                        if (notAcknowleged[i].value.data.Length == idSize + 1)
+                            recvPackets.Add(new RecvPacket(-1, RecvType.FIN, null, from));
+                        notAcknowleged.RemoveAt(i);
+                        exit = true;
+                        break;
+                    }
+                if (exit)
+                    continue;
+            }
+
+            byte[] toReceive = new byte[message.Length - idSize];
+            for (int i = 0; i < toReceive.Length; ++i)
+                toReceive[i] = message[i + idSize];
+
+            string received = Encoding.UTF8.GetString(toReceive).TrimEnd('\0');
+            if (received == "")
+            {
+                recvPackets.Add(new RecvPacket(-1, RecvType.FIN, null, from));
+                continue;
+            }
+
+            recvPackets.Add(new RecvPacket(recvID, RecvType.MESSAGE, received, from));
+        }
+    }
+
+    public int Send(string output)
+    {
         byte[] outputPacket;
         if (output != null)
         {
@@ -209,7 +324,18 @@ public class UDP : MonoBehaviour
         else
             outputPacket = DISCONNECT;
 
-        Ref<Message> message = new Ref<Message> { value = new Message(messageID, null) };
+        if (outputPacket.Length > MAX_BUFFER)
+        {
+            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
+            return -1;
+        }
+        if (remoteAddress == null)
+        {
+            ReportError("Networking Send Error: Remote Address is null");
+            return -1;
+        }
+
+        Ref<Message> message = new Ref<Message> { value = new Message(messageID, null, remoteAddress) };
 
         byte[] header = BitConverter.GetBytes(message.value.GetID());
         byte[] toSend = new byte[header.Length + outputPacket.Length];
@@ -218,41 +344,25 @@ public class UDP : MonoBehaviour
 
         message.value.data = toSend;
 
-        Debug.Log(name + " Sent Message -> " + message.value.GetID());
-        try
-        {
-            SendMessage(toSend, remoteAddress);
-        }
-        catch (SocketException error)
-        {
-            ReportError("Networking Send Error: " + error.Message);
-            return false;
-        }
+        Debug.Log(name + " Sent Message -> " + message.value.GetID() + " : " + output);
+        AddSendPacket(toSend, remoteAddress);
 
-        notAcknoledged.Add(message);
-        messageID++;
+        notAcknowleged.Add(message);
+        ++messageID;
 
-        return true;
+        return message.value.GetID();
     }
 
-    bool SendAcknowledgement(int id)
+    bool SendAcknowledgement(int id, EndPoint to)
     {
         if (remoteAddress == null)
         {
             ReportError("Networking Send Acknowledgement Error: Remote Address is null");
             return false;
         }
-
+        
         Debug.Log(name + " Sent Acknowledgement -> " + id);
-        try
-        {
-            SendMessage(BitConverter.GetBytes(id), remoteAddress);
-        }
-        catch (SocketException error)
-        {
-            ReportError("Networking Send Acknowledgement Error: " + error.Message);
-            return false;
-        }
+        AddSendPacket(BitConverter.GetBytes(id), to);
 
         return true;
     }
@@ -264,39 +374,57 @@ public class UDP : MonoBehaviour
             ReportError("Networking Resend Error: Remote Address is null");
             return false;
         }
-
-        Debug.Log(name + " Resent -> " + outputMessage.value.GetID());
-        try
-        {
-            SendMessage(outputMessage.value.data, remoteAddress);
-        }
-        catch (SocketException error)
-        {
-            ReportError("Networking Resend Error: " + error.Message);
-            return false;
-        }
+        
+        Debug.Log(name + " Resent -> " + outputMessage.value.GetID() + " : " + Encoding.UTF8.GetString(outputMessage.value.data, 4, outputMessage.value.data.Length - 4));
+        AddSendPacket(outputMessage.value.data, outputMessage.value.from);
 
         return true;
     }
 
-    public bool CanReceive()
+    void SendPackets()
     {
-        if (thisSocket.Poll(0, SelectMode.SelectRead))
-            return true;
-        return false;
+        byte[] toSend = new byte[currentBufferSize];
+        while (sendBuffer.Count != 0)
+        {
+            int lastIndex = 0;
+            EndPoint currentRemote = sendBuffer[0].to;
+            for (int i = 0; i < sendBuffer.Count; ++i)
+            {
+                SendPacket packet = sendBuffer[i];
+                if (currentRemote.ToString() == packet.to.ToString())
+                {
+                    packet.message.CopyTo(toSend, lastIndex);
+                    lastIndex += packet.message.Length;
+                    toSend.SetValue(MESSAGE_SEPARATOR, lastIndex);
+                    ++lastIndex;
+
+                    sendBuffer.RemoveAt(i);
+                    --i;
+                }
+            }
+
+            SendMessage(toSend, currentRemote);
+        }
+
+        currentBufferSize = 0;
+        timeLastSent = Time.realtimeSinceStartup;
     }
 
-    public bool CanSend()
+    public bool CanReceive()
     {
-        if (thisSocket.Poll(0, SelectMode.SelectWrite))
+        if (recvPackets.Count != 0)
             return true;
         return false;
     }
 
     public void Close()
     {
-        if (thisSocket != null)
-            thisSocket.Close();
+        notAcknowleged.Clear();
+        receivedIDs.Clear();
+        lastID = -1;
+        messageID = 0;
+
+        remoteAddress = new IPEndPoint(IPAddress.None, 0);
     }
 
     void ReportError(string error)
@@ -308,17 +436,20 @@ public class UDP : MonoBehaviour
     {
         Close();
 
+        if (thisSocket != null)
+            thisSocket.Close();
+
         // --- Shady stuffy ---
         thread.Abort();
     }
 
     // --- Shady stuffy ---
 
-    public bool jitter = true;
-    public bool packetLoss = true;
-    public int minJitt = 0;
-    public int maxJitt = 800;
-    public int lossThreshold = 90;
+    bool jitter = true;
+    bool packetLoss = false;
+    int minJitt = 0;
+    int maxJitt = 300;
+    int lossThreshold = 50;
 
     static readonly object myLock = new object();
     Thread thread = null;
