@@ -97,12 +97,11 @@ public class Client : MonoBehaviour
                             state = State.DISCONNECTED;
                             break;
                         case UDP.RecvType.MESSAGE:
-                            Debug.Log("RECEIVED -> " + received);
                             if (received == "registered" || received == "logged in")
                             {
                                 LoadMainMenu();
 
-                                Debug.Log("Succesfully " + received + "!");
+                                Log("Succesfully " + received + "!");
                                 state = State.IN_MENU;
                             }
                             else
@@ -137,7 +136,7 @@ public class Client : MonoBehaviour
                     }
                 }
                 break;
-            case State.IN_MENU: // TODO: FIX LOGOUT
+            case State.IN_MENU:
                 while (toServer.CanReceive())
                 {
                     string received = "";
@@ -150,7 +149,7 @@ public class Client : MonoBehaviour
                             state = State.DISCONNECTED;
                             break;
                         case UDP.RecvType.MESSAGE:
-                            Debug.Log(received);
+                            Log(received);
                             break;
                     }
                 }
@@ -305,6 +304,7 @@ public class Client : MonoBehaviour
     {
         if (menuScript != null)
             menuScript.Log_Out();
+        Log("", false);
     }
     // --- !UI(Menu) ---
 

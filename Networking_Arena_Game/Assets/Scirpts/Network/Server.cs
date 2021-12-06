@@ -28,18 +28,25 @@ public class Server : MonoBehaviour
             state = State.UNINTERESTED;
 
             lobby = null;
+
+            WAIT_TIME = 5.0f;
+            waitToDisconnect = -1.0f;
         }
 
         public string name;
         public string password;
         public Ref<Lobby> lobby;
 
+        public readonly float WAIT_TIME;
+        public float waitToDisconnect;
+
         public enum State
         {
             DISCONNECTED,
             UNINTERESTED,
             INTERESTED,
-            IN_GAME
+            IN_GAME,
+            DISCONNECTING
         }
         public State state;
 
@@ -48,14 +55,17 @@ public class Server : MonoBehaviour
 
     bool ClientConnect(Ref<Client> client, EndPoint remoteAddress)
     {
+        if (client.value.state == Client.State.DISCONNECTING)
+            ClientDisconnect(client);
+
         if (client.value.state != Client.State.DISCONNECTED)
             return false;
 
         GameObject newClient = new GameObject();
-        newClient.name = name;
+        newClient.name = client.value.name;
+
         client.value.socket = newClient.AddComponent<UDP>();
         client.value.socket.remoteAddress = remoteAddress;
-
         client.value.state = Client.State.UNINTERESTED;
 
         return true;
@@ -155,6 +165,7 @@ public class Server : MonoBehaviour
     void Start()
     {
         listener = gameObject.GetComponent<UDP>();
+        listener.listenMode = true;
     }
 
     void Update()
@@ -236,6 +247,14 @@ public class Server : MonoBehaviour
             if (client.value.state == Client.State.DISCONNECTED)
                 continue;
 
+            if (client.value.state == Client.State.DISCONNECTING &&
+                 Time.realtimeSinceStartup >= client.value.waitToDisconnect + client.value.WAIT_TIME)
+            {
+                Debug.Log("Server Client " + client.value.name + " disconnected!");
+                ClientDisconnect(client);
+                continue;
+            }
+
             while (client.value.socket.CanReceive())
             {
                 string received = "";
@@ -244,8 +263,9 @@ public class Server : MonoBehaviour
                     case UDP.RecvType.ERROR:
                         continue;
                     case UDP.RecvType.FIN:
-                        Debug.Log("Server Client " + client.value.name + " disconnected!");
-                        ClientDisconnect(client);
+                        Debug.Log("Server Client " + client.value.name + " received FIN packet!");
+                        client.value.state = Client.State.DISCONNECTING;
+                        client.value.waitToDisconnect = Time.realtimeSinceStartup;
                         break;
                     case UDP.RecvType.MESSAGE:
                         if (received == "quickmatch")

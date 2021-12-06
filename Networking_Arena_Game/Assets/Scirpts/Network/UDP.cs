@@ -18,7 +18,7 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly int MAX_RECV_IDS = 100;
     [HideInInspector]
-    static public readonly byte[] DISCONNECT = new byte[1];
+    static public readonly byte DISCONNECT = Encoding.UTF8.GetBytes("-")[0];
     [HideInInspector]
     static public readonly float MSG_WAIT_TIME = 3.0f;
     [HideInInspector]
@@ -29,12 +29,15 @@ public class UDP : MonoBehaviour
     Socket thisSocket = null;
     public EndPoint remoteAddress = null;
     int messageID = 0;
+    public bool listenMode = false;
 
     // --- Recv ---
     public enum RecvType
     {
         MESSAGE,
         FIN,
+        FIN_START,
+        FIN_END,
         EMPTY,
         ERROR
     }
@@ -160,12 +163,13 @@ public class UDP : MonoBehaviour
         while (thisSocket.Poll(0, SelectMode.SelectRead))
             ReceivePackets();
 
-        for (int i = 0; i < notAcknowleged.Count; ++i)
-            if (MessageIsTimedOut(notAcknowleged[i]))
-            {
-                Resend(notAcknowleged[i]);
-                MessageRestartTimer(notAcknowleged[i]);
-            }
+        if (!listenMode)
+            for (int i = 0; i < notAcknowleged.Count; ++i)
+                if (MessageIsTimedOut(notAcknowleged[i]))
+                {
+                    Resend(notAcknowleged[i]);
+                    MessageRestartTimer(notAcknowleged[i]);
+                }
     }
 
     public RecvType Receive(ref string message, bool setRemote = false)
@@ -184,59 +188,65 @@ public class UDP : MonoBehaviour
             }
             else
             {
-                ReportError("Receive Error: Received a message from an unknown address");
+                ReportError("UDP_" + name + " Receive Error: Received a message from an unknown address");
                 return RecvType.EMPTY;
             }
 
-        if (packet.id != -1)
+        if (packet.type == RecvType.MESSAGE || packet.type == RecvType.FIN_START)
         {
             SendAcknowledgement(packet.id, packet.from);
 
-            if (packet.id <= lastID)
-                return RecvType.EMPTY;
-            for (int i = 0; i < receivedIDs.Count; ++i)
-                if (packet.id == receivedIDs[i])
-                    return RecvType.EMPTY;
-
-            if (receivedIDs.Count > 0)
+            if (!listenMode)
             {
+                if (packet.id <= lastID)
+                    return RecvType.EMPTY;
                 for (int i = 0; i < receivedIDs.Count; ++i)
+                    if (packet.id == receivedIDs[i])
+                        return RecvType.EMPTY;
+
+                if (receivedIDs.Count > 0)
                 {
-                    if (receivedIDs[i] > packet.id)
+                    for (int i = 0; i < receivedIDs.Count; ++i)
                     {
-                        receivedIDs.Insert(i, packet.id);
-                        break;
-                    }
-                    if (i == receivedIDs.Count - 1)
-                    {
-                        receivedIDs.Add(packet.id);
-                        break;
+                        if (receivedIDs[i] > packet.id)
+                        {
+                            receivedIDs.Insert(i, packet.id);
+                            break;
+                        }
+                        if (i == receivedIDs.Count - 1)
+                        {
+                            receivedIDs.Add(packet.id);
+                            break;
+                        }
                     }
                 }
-            }
-            else
-                receivedIDs.Add(packet.id);
+                else
+                    receivedIDs.Add(packet.id);
 
-            while (receivedIDs.Count > MAX_RECV_IDS)
-            {
-                lastID = receivedIDs[0];
-                receivedIDs.RemoveAt(0);
-            }
+                while (receivedIDs.Count > MAX_RECV_IDS)
+                {
+                    lastID = receivedIDs[0];
+                    receivedIDs.RemoveAt(0);
+                }
 
-            int nextID = receivedIDs[0];
-            while (nextID - 1 == lastID)
-            {
-                lastID = nextID;
+                int nextID = receivedIDs[0];
+                while (nextID - 1 == lastID)
+                {
+                    lastID = nextID;
 
-                receivedIDs.RemoveAt(0);
-                if (receivedIDs.Count == 0)
-                    break;
+                    receivedIDs.RemoveAt(0);
+                    if (receivedIDs.Count == 0)
+                        break;
 
-                nextID = receivedIDs[0];
+                    nextID = receivedIDs[0];
+                }
             }
         }
 
-        message = packet.message;
+        if (packet.type == RecvType.FIN_START || packet.type == RecvType.FIN_END)
+            packet.type = RecvType.FIN;
+
+            message = packet.message;
         return packet.type;
     }
 
@@ -252,7 +262,7 @@ public class UDP : MonoBehaviour
         }
         catch (SocketException error)
         {
-            ReportError("Receive Error: " + error.Message);
+            ReportError("UDP_" + name + " Receive Error: " + error.Message);
             recvPackets.Add(new RecvPacket(-1, RecvType.ERROR, null, from));
             return;
         }
@@ -279,17 +289,17 @@ public class UDP : MonoBehaviour
 
             if (message.Length != idSize) // check if it is an acknoledgement package
             {
-                Debug.Log(name + " Received Message -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
+                ReportError("UDP_" + name + " Received Message -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
             }
             else
             {
-                Debug.Log(name + " Acknowledged -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
+                ReportError("UDP_" + name + " Acknowledged -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
                 bool exit = false;
                 for (int i = 0; i < notAcknowleged.Count; ++i)
                     if (notAcknowleged[i].value.GetID() == recvID)
                     {
-                        if (notAcknowleged[i].value.data.Length == idSize + 1)
-                            recvPackets.Add(new RecvPacket(-1, RecvType.FIN, null, from));
+                        if (notAcknowleged[i].value.data[idSize] == DISCONNECT)
+                            recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_END, null, from));
                         notAcknowleged.RemoveAt(i);
                         exit = true;
                         break;
@@ -302,13 +312,13 @@ public class UDP : MonoBehaviour
             for (int i = 0; i < toReceive.Length; ++i)
                 toReceive[i] = message[i + idSize];
 
-            string received = Encoding.UTF8.GetString(toReceive).TrimEnd('\0');
-            if (received == "")
+            if (toReceive.Length == 1 && toReceive[0] == DISCONNECT)
             {
-                recvPackets.Add(new RecvPacket(-1, RecvType.FIN, null, from));
+                recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_START, null, from));
                 continue;
             }
 
+            string received = Encoding.UTF8.GetString(toReceive).TrimEnd('\0');
             recvPackets.Add(new RecvPacket(recvID, RecvType.MESSAGE, received, from));
         }
     }
@@ -322,16 +332,16 @@ public class UDP : MonoBehaviour
             outputPacket = Encoding.UTF8.GetBytes(output);
         }
         else
-            outputPacket = DISCONNECT;
+            outputPacket = new byte[1] { DISCONNECT };
 
         if (outputPacket.Length > MAX_BUFFER)
         {
-            Debug.Log("Client Send Error: Message larger than " + MAX_BUFFER);
+            ReportError("UDP_" + name + "Send Error: Message larger than " + MAX_BUFFER);
             return -1;
         }
         if (remoteAddress == null)
         {
-            ReportError("Networking Send Error: Remote Address is null");
+            ReportError("UDP_" + name + " Send Error: Remote Address is null");
             return -1;
         }
 
@@ -344,10 +354,11 @@ public class UDP : MonoBehaviour
 
         message.value.data = toSend;
 
-        Debug.Log(name + " Sent Message -> " + message.value.GetID() + " : " + output);
+        ReportError("UDP_" + name  + " Sent Message -> " + message.value.GetID() + " : " + Encoding.UTF8.GetString(toSend, 4, toSend.Length - 4));
         AddSendPacket(toSend, remoteAddress);
 
-        notAcknowleged.Add(message);
+        if (!listenMode)
+            notAcknowleged.Add(message);
         ++messageID;
 
         return message.value.GetID();
@@ -357,11 +368,11 @@ public class UDP : MonoBehaviour
     {
         if (remoteAddress == null)
         {
-            ReportError("Networking Send Acknowledgement Error: Remote Address is null");
+            ReportError("UDP_" + name + " Send Acknowledgement Error: Remote Address is null");
             return false;
         }
         
-        Debug.Log(name + " Sent Acknowledgement -> " + id);
+        ReportError("UDP_" + name + " Sent Acknowledgement -> " + id);
         AddSendPacket(BitConverter.GetBytes(id), to);
 
         return true;
@@ -371,11 +382,11 @@ public class UDP : MonoBehaviour
     {
         if (remoteAddress == null)
         {
-            ReportError("Networking Resend Error: Remote Address is null");
+            ReportError("UDP_" + name + " Resend Error: Remote Address is null");
             return false;
         }
         
-        Debug.Log(name + " Resent -> " + outputMessage.value.GetID() + " : " + Encoding.UTF8.GetString(outputMessage.value.data, 4, outputMessage.value.data.Length - 4));
+        ReportError("UDP_" + name + " Resent -> " + outputMessage.value.GetID() + " : " + Encoding.UTF8.GetString(outputMessage.value.data, 4, outputMessage.value.data.Length - 4));
         AddSendPacket(outputMessage.value.data, outputMessage.value.from);
 
         return true;
@@ -482,7 +493,7 @@ public class UDP : MonoBehaviour
                 packetBuffer.Add(pack);
         }
         else
-            Debug.Log("Package Lost BOOHOO");
+            ReportError("UDP_" + name + "Package Lost BOOHOO");
     }
 
     //Run this always in a separate Thread, to send the delayed messages
@@ -512,5 +523,16 @@ public class UDP : MonoBehaviour
                 }
             }
         }
+    }
+
+    // --- Array Util ---
+    bool ArrayCmp(byte[] array1, byte[] array2, int index = 0)
+    {
+        if (array1.Length - index != array2.Length)
+            return false;
+        for (int i = index; i < array1.Length; ++i)
+            if (array1[i] != array2[i])
+                return false;
+        return true;
     }
 }
