@@ -247,10 +247,9 @@ public class Player_Controller : MonoBehaviour
 
     void Shoot()
     {
-        //ISSUE:--> The bullet doesn'r rotate in the foward direction, it instanciate looking upwards.
+        Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
+        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward + offset));
 
-        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward));
-        //bullet.gameObject.transform.LookAt(pointToLook);
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
         bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
     }
