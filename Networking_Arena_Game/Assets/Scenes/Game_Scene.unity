@@ -3448,7 +3448,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -4216859302048453862, guid: 320b1c2af77554f99a1658df4a6d3d5c, type: 3}
       propertyPath: m_RootOrder
-      value: 6
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: 320b1c2af77554f99a1658df4a6d3d5c, type: 3}
       propertyPath: m_LocalScale.x
@@ -3533,7 +3533,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 244727086}
   cameraOffset: {x: 0, y: 40, z: 15}
-  cameraMovementFollowUpSpeed: 0.175
+  cameraMovementFollowUpSpeed: 0.075
   movementSpeed: 30
   dashCooldown: 2
   dashDuration: 0.15
@@ -3541,10 +3541,12 @@ MonoBehaviour:
   canonPosition: {fileID: 1152376978}
   bulletPrefab: {fileID: 4832174139182581250, guid: 64b43f0ba5f58d243868804417ccf965, type: 3}
   bulletForce: 170
+  firerate: 0.05
   laserPrefab: {fileID: 1418158253269514, guid: 280b8b1393d77f148a8cbcfc7f36e116, type: 3}
   grenadePrefab: {fileID: 6028146140949575064, guid: 9b0aa1688b81cb145827db637e430ab4, type: 3}
   grenadeForce: 1.3
   grenadeAngle: 15
+  grenadeCooldown: 0
   rotateThreshold: 0.5
 --- !u!95 &1463777477
 Animator:
@@ -4366,7 +4368,7 @@ Transform:
   - {fileID: 193949961}
   - {fileID: 1114743481}
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1757767673 stripped
 Transform:
