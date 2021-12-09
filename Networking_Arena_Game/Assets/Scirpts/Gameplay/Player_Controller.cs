@@ -41,6 +41,11 @@ public class Player_Controller : MonoBehaviour
     public float grenadeCooldown;
     private float grenadeTimer;
 
+    //Missile Attack
+    public GameObject crosshairPrefab;
+    public float missileSpawnHeight = 40f;
+    public float missileVelocity = -35f;
+
     //Animator
     private Animator animator;
     public float rotateThreshold;
@@ -216,7 +221,10 @@ public class Player_Controller : MonoBehaviour
 
     void ShootGranade()
     {
-        
+        Instantiate(crosshairPrefab, GetPlayerPointToLook(), Quaternion.identity);
+        GameObject grenade = Instantiate(grenadePrefab, new Vector3(GetPlayerPointToLook().x, missileSpawnHeight, GetPlayerPointToLook().z), Quaternion.identity);
+        grenade.GetComponent<Rigidbody>().velocity = new Vector3(0, missileVelocity, 0);
+        /*
         //Get the X and Z target position
         Vector3 targetXZ = new Vector3(pointToLook.x, 0.0f, pointToLook.z);
 
@@ -241,7 +249,7 @@ public class Player_Controller : MonoBehaviour
 
         //Shoot the grenade
         grenade.GetComponent<Rigidbody>().velocity = globalVelocity * grenadeForce;
-        
+        */
     }
     void CameraFollow() 
     {
