@@ -28,6 +28,7 @@ public class Player_Controller : MonoBehaviour
     public float bulletForce = 15f;
     public float firerate = 0.5f;
     float firerateCount = 0.0f;
+    public float deviationRange = 0.05f;
 
     //Special Attack
     public GameObject laserPrefab;
@@ -221,7 +222,7 @@ public class Player_Controller : MonoBehaviour
 
     void ShootGranade()
     {
-        Instantiate(crosshairPrefab, GetPlayerPointToLook(), Quaternion.identity);
+        Instantiate(crosshairPrefab, new Vector3(GetPlayerPointToLook().x, 1 , GetPlayerPointToLook().z), Quaternion.identity);
         GameObject grenade = Instantiate(grenadePrefab, new Vector3(GetPlayerPointToLook().x, missileSpawnHeight, GetPlayerPointToLook().z), Quaternion.identity);
         grenade.GetComponent<Rigidbody>().velocity = new Vector3(0, missileVelocity, 0);
         /*
@@ -266,7 +267,8 @@ public class Player_Controller : MonoBehaviour
             GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward + offset));
 
             Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
-            bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
+            Vector3 randomDeviation = new Vector3(Random.Range(deviationRange, -deviationRange), 0, Random.Range(deviationRange, -deviationRange));
+            bulletRB.AddForce((canonPosition.forward + randomDeviation) * bulletForce, ForceMode.Impulse);
             firerateCount = 0;
         }
     }
