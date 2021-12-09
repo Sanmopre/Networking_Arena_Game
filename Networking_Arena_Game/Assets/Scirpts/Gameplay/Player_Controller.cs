@@ -9,12 +9,12 @@ public class Player_Controller : MonoBehaviour
     public Vector3 cameraOffset;
     public float cameraMovementFollowUpSpeed;
 
-    // Movement Vars
+    [Header("Movement Vars")]
     public float movementSpeed;
     private Vector3 moveInput = new Vector3();
     Vector3 pointToLook = new Vector3();
 
-    //Dash
+    [Header("Dash")]
     public float dashCooldown = 4.0f;
     public float dashDuration = 1.0f;
     public float dashForce = 50.0f;
@@ -22,7 +22,7 @@ public class Player_Controller : MonoBehaviour
     private bool dashInCooldown = false;
     private float dashCounter = 0.0f;
 
-    //Shooting variables
+    [Header("Shooting variables")]
     public Transform canonPosition;
     public GameObject bulletPrefab;
     public float bulletForce = 15f;
@@ -30,24 +30,30 @@ public class Player_Controller : MonoBehaviour
     float firerateCount = 0.0f;
     public float deviationRange = 0.05f;
 
-    //Special Attack
+    [Header("Laser Attack")]
     public GameObject laserPrefab;
     private GameObject Instance;
     private LaserBehaviour LaserScript;
 
-    //Granade Attack
+    [Header("Grenade")]
     public GameObject grenadePrefab;
     public float grenadeForce;
     public float grenadeAngle;
     public float grenadeCooldown;
     private float grenadeTimer;
 
-    //Missile Attack
+    [Header("Missile Attack")]
     public GameObject crosshairPrefab;
+    public GameObject explotionCollider;
     public float missileSpawnHeight = 40f;
     public float missileVelocity = -35f;
+    public float expltionTimer = 2.0f;
+    float explotionCounter = 0f;
+    public float explotionDuration = 1.0f;
+    bool missileComming = false;
+    Vector3 explotionPosition;
 
-    //Animator
+    [Header("Animator")]
     private Animator animator;
     public float rotateThreshold;
     //float lookAndMoveAngle;
@@ -81,6 +87,8 @@ public class Player_Controller : MonoBehaviour
 
         //SMOOOOTH CAMERA FOLLOW
         CameraFollow();
+
+        ManageExplotionFromMissile();
     }
 
     private void ShootingInput() 
@@ -219,12 +227,28 @@ public class Player_Controller : MonoBehaviour
         return new Vector3(pointToLook.x, transform.position.y, pointToLook.z);
     }
 
-
+    void ManageExplotionFromMissile() 
+    {
+        if(missileComming && explotionCounter > expltionTimer)
+        {
+            GameObject explotion = Instantiate(explotionCollider, explotionPosition, Quaternion.identity);
+            Destroy(explotion, explotionDuration);
+            missileComming = false;
+        }
+        else 
+        {
+            explotionCounter += Time.deltaTime;
+        }
+    }
     void ShootGranade()
     {
         Instantiate(crosshairPrefab, new Vector3(GetPlayerPointToLook().x, 1 , GetPlayerPointToLook().z), Quaternion.identity);
         GameObject grenade = Instantiate(grenadePrefab, new Vector3(GetPlayerPointToLook().x, missileSpawnHeight, GetPlayerPointToLook().z), Quaternion.identity);
         grenade.GetComponent<Rigidbody>().velocity = new Vector3(0, missileVelocity, 0);
+        missileComming = true;
+        explotionCounter = 0;
+        explotionPosition = GetPlayerPointToLook();
+
         /*
         //Get the X and Z target position
         Vector3 targetXZ = new Vector3(pointToLook.x, 0.0f, pointToLook.z);
