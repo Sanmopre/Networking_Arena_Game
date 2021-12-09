@@ -26,6 +26,8 @@ public class Player_Controller : MonoBehaviour
     public Transform canonPosition;
     public GameObject bulletPrefab;
     public float bulletForce = 15f;
+    public float firerate = 0.5f;
+    float firerateCount = 0.0f;
 
     //Special Attack
     public GameObject laserPrefab;
@@ -57,6 +59,8 @@ public class Player_Controller : MonoBehaviour
         GetMoveInput();
         ShootingInput();
         DashCountersLogic();
+        //Firerate
+        firerateCount += Time.deltaTime;
     }
     private void FixedUpdate()
     {
@@ -76,7 +80,7 @@ public class Player_Controller : MonoBehaviour
     private void ShootingInput() 
     {
         //Shooting Behaviour
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButton(0))
         {
             Shoot();
         }
@@ -212,6 +216,7 @@ public class Player_Controller : MonoBehaviour
 
     void ShootGranade()
     {
+        
         //Get the X and Z target position
         Vector3 targetXZ = new Vector3(pointToLook.x, 0.0f, pointToLook.z);
 
@@ -236,7 +241,7 @@ public class Player_Controller : MonoBehaviour
 
         //Shoot the grenade
         grenade.GetComponent<Rigidbody>().velocity = globalVelocity * grenadeForce;
-
+        
     }
     void CameraFollow() 
     {
@@ -247,12 +252,15 @@ public class Player_Controller : MonoBehaviour
 
     void Shoot()
     {
-        //ISSUE:--> The bullet doesn'r rotate in the foward direction, it instanciate looking upwards.
+        if (firerateCount > firerate)
+        {
+            Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
+            GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward + offset));
 
-        GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward));
-        //bullet.gameObject.transform.LookAt(pointToLook);
-        Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
-        bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
+            Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
+            bulletRB.AddForce(canonPosition.forward * bulletForce, ForceMode.Impulse);
+            firerateCount = 0;
+        }
     }
     void ShootLaser()
     {
