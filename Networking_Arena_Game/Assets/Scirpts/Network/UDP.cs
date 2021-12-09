@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
+using System.Text;
 
 using UnityEngine;
 
@@ -31,6 +31,9 @@ public class UDP : MonoBehaviour
     int messageID = 0;
     public bool listenMode = false;
 
+    public string BindAddressStr() { return thisSocket.LocalEndPoint.ToString(); }
+    public string RemoteAddressStr() { return remoteAddress.ToString(); }
+
     // --- Recv ---
     public enum RecvType
     {
@@ -43,7 +46,7 @@ public class UDP : MonoBehaviour
     }
     struct RecvPacket
     {
-        public RecvPacket(int id, RecvType type, string message, EndPoint from)
+        public RecvPacket(int id, RecvType type, byte[] message, EndPoint from)
         {
             this.id = id;
             this.type = type;
@@ -53,7 +56,7 @@ public class UDP : MonoBehaviour
 
         public readonly int id;
         public RecvType type;
-        public string message;
+        public byte[] message;
         public EndPoint from;
     }
     List<RecvPacket> recvPackets = new List<RecvPacket>();
@@ -160,6 +163,7 @@ public class UDP : MonoBehaviour
     {
         if (sendBuffer.Count > 0 && Time.realtimeSinceStartup >= timeLastSent + SEND_RATE)
             SendPackets();
+
         while (thisSocket.Poll(0, SelectMode.SelectRead))
             ReceivePackets();
 
@@ -173,6 +177,14 @@ public class UDP : MonoBehaviour
     }
 
     public RecvType Receive(ref string message, bool setRemote = false)
+    {
+        byte[] inputPacket = null;
+        RecvType output =  Receive(ref inputPacket, setRemote);
+        message = Encoding.UTF8.GetString(inputPacket);
+        return output;
+    }
+
+    public RecvType Receive(ref byte[] message, bool setRemote = false)
     {
         if (recvPackets.Count == 0)
             return RecvType.EMPTY;
@@ -289,17 +301,19 @@ public class UDP : MonoBehaviour
 
             if (message.Length != idSize) // check if it is an acknoledgement package
             {
-                ReportError("UDP_" + name + " Received Message -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
+                ReportError("UDP_" + name + " Received Message -> " + recvID);
             }
             else
             {
-                ReportError("UDP_" + name + " Acknowledged -> " + recvID + " : " + Encoding.UTF8.GetString(message, 4, message.Length - 4));
+                ReportError("UDP_" + name + " Acknowledged -> " + recvID);
                 bool exit = false;
                 for (int i = 0; i < notAcknowleged.Count; ++i)
                     if (notAcknowleged[i].value.GetID() == recvID)
                     {
-                        if (notAcknowleged[i].value.data[idSize] == DISCONNECT)
-                            recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_END, null, from));
+                        if (notAcknowleged[i].value.data.Length > idSize)
+                            if (notAcknowleged[i].value.data[idSize] == DISCONNECT)
+                                recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_END, null, from));
+
                         notAcknowleged.RemoveAt(i);
                         exit = true;
                         break;
@@ -318,19 +332,20 @@ public class UDP : MonoBehaviour
                 continue;
             }
 
-            string received = Encoding.UTF8.GetString(toReceive).TrimEnd('\0');
-            recvPackets.Add(new RecvPacket(recvID, RecvType.MESSAGE, received, from));
+            toReceive = ByteArray.TrimEnd(toReceive);
+            recvPackets.Add(new RecvPacket(recvID, RecvType.MESSAGE, toReceive, from));
         }
     }
 
-    public int Send(string output)
+    public int Send(string outputPacket)
     {
-        byte[] outputPacket;
-        if (output != null)
-        {
-            output.TrimEnd('\0');
-            outputPacket = Encoding.UTF8.GetBytes(output);
-        }
+        return Send(Encoding.UTF8.GetBytes(outputPacket));
+    }
+
+    public int Send(byte[] outputPacket)
+    {
+        if (outputPacket != null)
+            outputPacket = ByteArray.TrimEnd(outputPacket);
         else
             outputPacket = new byte[1] { DISCONNECT };
 
@@ -354,7 +369,7 @@ public class UDP : MonoBehaviour
 
         message.value.data = toSend;
 
-        ReportError("UDP_" + name  + " Sent Message -> " + message.value.GetID() + " : " + Encoding.UTF8.GetString(toSend, 4, toSend.Length - 4));
+        ReportError("UDP_" + name  + " Sent Message -> " + message.value.GetID());
         AddSendPacket(toSend, remoteAddress);
 
         if (!listenMode)
@@ -386,7 +401,7 @@ public class UDP : MonoBehaviour
             return false;
         }
         
-        ReportError("UDP_" + name + " Resent -> " + outputMessage.value.GetID() + " : " + Encoding.UTF8.GetString(outputMessage.value.data, 4, outputMessage.value.data.Length - 4));
+        ReportError("UDP_" + name + " Resent -> " + outputMessage.value.GetID());
         AddSendPacket(outputMessage.value.data, outputMessage.value.from);
 
         return true;
@@ -440,7 +455,7 @@ public class UDP : MonoBehaviour
 
     void ReportError(string error)
     {
-        Debug.Log(error);
+        //Debug.Log(error);
     }
 
     private void OnDestroy()
@@ -456,7 +471,7 @@ public class UDP : MonoBehaviour
 
     // --- Shady stuffy ---
 
-    bool jitter = true;
+    bool jitter = false;
     bool packetLoss = false;
     int minJitt = 0;
     int maxJitt = 300;
@@ -523,16 +538,5 @@ public class UDP : MonoBehaviour
                 }
             }
         }
-    }
-
-    // --- Array Util ---
-    bool ArrayCmp(byte[] array1, byte[] array2, int index = 0)
-    {
-        if (array1.Length - index != array2.Length)
-            return false;
-        for (int i = index; i < array1.Length; ++i)
-            if (array1[i] != array2[i])
-                return false;
-        return true;
     }
 }

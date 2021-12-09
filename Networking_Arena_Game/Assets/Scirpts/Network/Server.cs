@@ -63,6 +63,7 @@ public class Server : MonoBehaviour
 
         GameObject newClient = new GameObject();
         newClient.name = client.value.name;
+        DontDestroyOnLoad(newClient); // DELETE
 
         client.value.socket = newClient.AddComponent<UDP>();
         client.value.socket.remoteAddress = remoteAddress;
@@ -164,6 +165,7 @@ public class Server : MonoBehaviour
 
     void Start()
     {
+        DontDestroyOnLoad(gameObject); // DELETE
         listener = gameObject.GetComponent<UDP>();
         listener.listenMode = true;
     }
@@ -257,7 +259,7 @@ public class Server : MonoBehaviour
 
             while (client.value.socket.CanReceive())
             {
-                string received = "";
+                byte[] received = null;
                 switch (client.value.socket.Receive(ref received))
                 {
                     case UDP.RecvType.ERROR:
@@ -268,7 +270,7 @@ public class Server : MonoBehaviour
                         client.value.waitToDisconnect = Time.realtimeSinceStartup;
                         break;
                     case UDP.RecvType.MESSAGE:
-                        if (received == "quickmatch")
+                        if (Encoding.UTF8.GetString(received) == "quickmatch")
                         {
                             Ref<Lobby> lobby = null;
                             for (int i = 0; i < lobbies.Count; ++i)
@@ -299,7 +301,15 @@ public class Server : MonoBehaviour
                         }
                         else
                         {
-                            Debug.Log(received);
+                            if (client.value.state == Client.State.IN_GAME && client.value.lobby != null)
+                            {
+                                Ref<Client> resendTo = client.value.lobby.value.player1;
+                                if (client == client.value.lobby.value.player1)
+                                    resendTo = client.value.lobby.value.player2;
+                            
+                                Debug.Log("Resent Serialized Data from client " + client.value.name + " to client " + resendTo.value.name);
+                                resendTo.value.socket.Send(received);
+                            }
                         }
                         break;
                 }

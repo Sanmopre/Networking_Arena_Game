@@ -1,8 +1,4 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 
 using UnityEngine;
@@ -29,6 +25,7 @@ public class Client : MonoBehaviour
         SET_REMOTE,
         IN_MENU,
         WAITING_FOR_MATCH,
+        GAME_SETUP,
         IN_GAME,
         DISCONNECTING,
         DISCONNECTED,
@@ -43,7 +40,22 @@ public class Client : MonoBehaviour
     public Text errorLogText = null;
     [HideInInspector]
     public Text menuNameText = null;
-    // ---
+    // --- !UI ---
+
+    // --- Game ---
+    [HideInInspector]
+    public Rigidbody player = null;
+    [HideInInspector]
+    public Rigidbody enemy = null;
+    float lastDataSent = 0.0f;
+    int sendID = 0;
+    int lastRecvID = 0;
+    int lastNetID = 0;
+    int playerAmount = 2;
+
+    int playerNetID = 0;
+    // --- !Game ---
+
 
     void Start()
     {
@@ -168,12 +180,70 @@ public class Client : MonoBehaviour
                             break;
                         case UDP.RecvType.MESSAGE:
                             if (received == "match found")
+                            {
+                                state = State.GAME_SETUP;
                                 SceneManager.LoadScene("Game_Scene");
+                            }
                             else
                             {
                                 state = State.IN_MENU;
                                 LoadMainMenu();
                             }
+                            break;
+                    }
+                }
+                break;
+            case State.GAME_SETUP:
+                GameObject go = GameObject.Find("Player");
+                if (go != null)
+                    player = go.GetComponent<Rigidbody>();
+                go = GameObject.Find("Enemy");
+                if (go != null)
+                    enemy = go.GetComponent<Rigidbody>();
+
+                state = State.IN_GAME;
+                break;
+            case State.IN_GAME:
+                if (Time.realtimeSinceStartup >= lastDataSent + UDP.SEND_RATE)
+                {
+                    NetworkStream stream = new NetworkStream();
+                    stream.AddIdData(sendID);
+                    ++sendID;
+
+                    stream.AddObject(playerNetID, player.position, player.velocity);
+
+                    toServer.Send(stream.GetBuffer());
+
+                    lastDataSent = Time.realtimeSinceStartup;
+                }
+                while (toServer.CanReceive())
+                {
+                    byte[] received = null;
+                    switch (toServer.Receive(ref received))
+                    {
+                        case UDP.RecvType.ERROR:
+                            continue;
+                        case UDP.RecvType.FIN:
+                            toServer.Close();
+                            state = State.DISCONNECTED;
+                            break;
+                        case UDP.RecvType.MESSAGE:
+                            NetworkStream.Data data = NetworkStream.Deserialize(received, ref lastRecvID);
+
+                            for (int i = 0; i < data.functions.Count; ++i)
+                            {
+
+                            }
+
+                            if (lastRecvID < data.id)
+                                for (int i = 0; i < data.objects.Count; ++i)
+                                {
+                                    // FindGameObjectByNetIdOrWhatever(objects[i].netId);
+                                    enemy.position = data.objects[i].position;
+                                    enemy.velocity = data.objects[i].velocity;
+                                }
+
+                            lastRecvID = data.id;
                             break;
                     }
                 }
@@ -207,7 +277,7 @@ public class Client : MonoBehaviour
             return;
 
         if (state != State.DISCONNECTING)
-            toServer.Send(null);
+            toServer.Send((byte[])null);
         toServer.Close();
     }
 
@@ -261,7 +331,7 @@ public class Client : MonoBehaviour
         if (state != State.IN_MENU)
             return;
 
-        toServer.Send(null);
+        toServer.Send((byte[])null);
         state = State.DISCONNECTING;
     }
 
