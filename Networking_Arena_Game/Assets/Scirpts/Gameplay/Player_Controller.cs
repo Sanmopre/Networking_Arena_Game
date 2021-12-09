@@ -29,29 +29,28 @@ public class Player_Controller : MonoBehaviour
     public float firerate = 0.5f;
     float firerateCount = 0.0f;
     public float deviationRange = 0.05f;
+    bool shooting = false;
 
-    [Header("Laser Attack")]
-    public GameObject laserPrefab;
-    private GameObject Instance;
-    private LaserBehaviour LaserScript;
-
-    [Header("Grenade")]
-    public GameObject grenadePrefab;
-    public float grenadeForce;
-    public float grenadeAngle;
-    public float grenadeCooldown;
-    private float grenadeTimer;
+    [Header("Shotgun")]
+    public GameObject shotgunFire;
+    public float fireDuration = 0.25f;
+    public float shotgunfirerate = 1.0f;
+    float shotCounter = 0;
+    bool shootingShotgun = false;
 
     [Header("Missile Attack")]
     public GameObject crosshairPrefab;
     public GameObject explotionCollider;
+    public GameObject missilePrefab;
     public float missileSpawnHeight = 40f;
     public float missileVelocity = -35f;
     public float expltionTimer = 2.0f;
     float explotionCounter = 0f;
     public float explotionDuration = 1.0f;
     bool missileComming = false;
-    Vector3 explotionPosition;
+    Vector3 explotionPosition;    
+    public float grenadeCooldown;
+    private float grenadeTimer;
 
     [Header("Animator")]
     private Animator animator;
@@ -73,6 +72,7 @@ public class Player_Controller : MonoBehaviour
         DashCountersLogic();
         //Firerate
         firerateCount += Time.deltaTime;
+        shotCounter += Time.deltaTime;
     }
     private void FixedUpdate()
     {
@@ -94,22 +94,29 @@ public class Player_Controller : MonoBehaviour
     private void ShootingInput() 
     {
         //Shooting Behaviour
-        if (Input.GetMouseButton(0))
+        if (!shootingShotgun && Input.GetMouseButton(0))
         {
+            shooting = true;
             Shoot();
         }
-        if (Input.GetMouseButtonDown(1))
+        else 
         {
-            ShootLaser();
+            shooting = false;
         }
-        if (Input.GetMouseButtonUp(1))
+
+        if (!shooting && Input.GetMouseButton(1))
         {
-            DestroyLaser();
+            shootingShotgun = true;
+            ShoutgunAttack();
+        }
+        else 
+        {
+            shootingShotgun = false;
         }
        
         if (Input.GetKeyDown(KeyCode.F) && grenadeTimer >= grenadeCooldown)
         {
-            ShootGranade();
+            ShootMissile();
             grenadeTimer = 0;
         }
         else 
@@ -240,41 +247,15 @@ public class Player_Controller : MonoBehaviour
             explotionCounter += Time.deltaTime;
         }
     }
-    void ShootGranade()
+    void ShootMissile()
     {
         Instantiate(crosshairPrefab, new Vector3(GetPlayerPointToLook().x, 1 , GetPlayerPointToLook().z), Quaternion.identity);
-        GameObject grenade = Instantiate(grenadePrefab, new Vector3(GetPlayerPointToLook().x, missileSpawnHeight, GetPlayerPointToLook().z), Quaternion.identity);
+        GameObject grenade = Instantiate(missilePrefab, new Vector3(GetPlayerPointToLook().x, missileSpawnHeight, GetPlayerPointToLook().z), Quaternion.identity);
         grenade.GetComponent<Rigidbody>().velocity = new Vector3(0, missileVelocity, 0);
         missileComming = true;
         explotionCounter = 0;
         explotionPosition = GetPlayerPointToLook();
 
-        /*
-        //Get the X and Z target position
-        Vector3 targetXZ = new Vector3(pointToLook.x, 0.0f, pointToLook.z);
-
-        //Instantiate the grenade and set the correct orientation
-        GameObject grenade = Instantiate(grenadePrefab, canonPosition.position, Quaternion.identity);
-        grenade.gameObject.transform.LookAt(targetXZ);
-        Vector3 projectileXZPos = new Vector3(grenade.gameObject.transform.position.x, 0.0f, grenade.gameObject.transform.position.z);
-
-        //Variables to calculate the intial speed in an arc shot
-        float R = Vector3.Distance(projectileXZPos, targetXZ);
-        float G = Physics.gravity.y;
-        float tanAlpha = Mathf.Tan(grenadeAngle * Mathf.Deg2Rad);
-        float H = (targetXZ.y - grenade.gameObject.transform.position.y);
-
-        //Calculate initial speed required to land the grenade on the target object 
-        float Vz = Mathf.Sqrt(G * R * R / (2.0f * (H - R * tanAlpha)));
-        float Vy = tanAlpha * Vz;
-
-        //Create the velocity vector
-        Vector3 localVelocity = new Vector3(0f, Vy, Vz);
-        Vector3 globalVelocity = grenade.gameObject.transform.TransformDirection(localVelocity);
-
-        //Shoot the grenade
-        grenade.GetComponent<Rigidbody>().velocity = globalVelocity * grenadeForce;
-        */
     }
     void CameraFollow() 
     {
@@ -296,16 +277,16 @@ public class Player_Controller : MonoBehaviour
             firerateCount = 0;
         }
     }
-    void ShootLaser()
+
+    void ShoutgunAttack() 
     {
-        Destroy(Instance);
-        Instance = Instantiate(laserPrefab, canonPosition.position, canonPosition.rotation);
-        Instance.transform.parent = transform;
-        LaserScript = Instance.GetComponent<LaserBehaviour>();
-    }
-    void DestroyLaser()
-    {
-        LaserScript.DisablePrepare();
-        Destroy(Instance, 1);
+        if (shotCounter > shotgunfirerate)
+        {
+            Vector3 offset = new Vector3(0, transform.rotation.eulerAngles.y, 0);
+            GameObject shotgunFireObj = Instantiate(shotgunFire, canonPosition.position, Quaternion.Euler(canonPosition.forward + offset));
+            Destroy(shotgunFireObj, fireDuration);
+            shotCounter = 0;
+            shotgunFireObj.transform.parent = transform;
+        }
     }
 }

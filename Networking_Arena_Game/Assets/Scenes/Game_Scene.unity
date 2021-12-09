@@ -1984,17 +1984,17 @@ MonoBehaviour:
   bulletForce: 170
   firerate: 0.05
   deviationRange: 0.03
-  laserPrefab: {fileID: 1418158253269514, guid: 280b8b1393d77f148a8cbcfc7f36e116, type: 3}
-  grenadePrefab: {fileID: 6028146140949575064, guid: 9b0aa1688b81cb145827db637e430ab4, type: 3}
-  grenadeForce: 1.3
-  grenadeAngle: 15
-  grenadeCooldown: 2
+  shotgunFire: {fileID: 186210888600393939, guid: e35300e59072a6e4181257dfa2dfe861, type: 3}
+  fireDuration: 0.1
+  shotgunfirerate: 1
   crosshairPrefab: {fileID: 6206393302711396023, guid: d582e24119de2fa48829a943f469f5a9, type: 3}
   explotionCollider: {fileID: 5816772431622093588, guid: 85e22b033ce92e846a787d787bf3d547, type: 3}
+  missilePrefab: {fileID: 0}
   missileSpawnHeight: 40
   missileVelocity: -35
   expltionTimer: 1
   explotionDuration: 1
+  grenadeCooldown: 2
   rotateThreshold: 0.5
 --- !u!95 &1463777477
 Animator:
