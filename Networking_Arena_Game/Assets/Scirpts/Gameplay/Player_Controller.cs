@@ -13,6 +13,7 @@ public class Player_Controller : MonoBehaviour
     public float movementSpeed;
     private Vector3 moveInput = new Vector3();
     Vector3 pointToLook = new Vector3();
+    public float speedReductionWhileShooting = 2.0f;
 
     [Header("Dash")]
     public float dashCooldown = 4.0f;
@@ -109,6 +110,7 @@ public class Player_Controller : MonoBehaviour
         {
             shootingShotgun = true;
             ShoutgunAttack();
+
         }
         else 
         {
@@ -166,15 +168,27 @@ public class Player_Controller : MonoBehaviour
         if(inDash == false)
         {
             //DIAGONAL MOVEMENT CORRECTION (NUT SURE)
-            
-            if (moveInput.x != 0 && moveInput.z != 0)
+            if (shooting) 
             {
-                myRigidbody.velocity = moveInput/ 1.4f * movementSpeed;
+                if (moveInput.x != 0 && moveInput.z != 0)
+                {
+                    myRigidbody.velocity = moveInput / 1.4f * movementSpeed / speedReductionWhileShooting;
+                }
+                else
+                {
+                    myRigidbody.velocity = moveInput * movementSpeed / speedReductionWhileShooting;
+                }
             }
             else 
             {
-                myRigidbody.velocity = moveInput * movementSpeed;
-            
+                if (moveInput.x != 0 && moveInput.z != 0)
+                {
+                    myRigidbody.velocity = moveInput/ 1.4f * movementSpeed;
+                }
+                else 
+                {
+                    myRigidbody.velocity = moveInput * movementSpeed;
+                }
             }
         }
 

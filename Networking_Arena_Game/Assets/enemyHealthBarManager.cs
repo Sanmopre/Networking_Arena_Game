@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class enemyHealthBarManager : MonoBehaviour
 {
-
     private void LateUpdate()
     {
         transform.LookAt(Camera.main.transform);
