@@ -57,6 +57,7 @@ public class Player_Controller : MonoBehaviour
     public float rotateThreshold;
     //float lookAndMoveAngle;
 
+    public Vector3 cameraPositionForCanvas;
     void Start()
     {
         myRigidbody = GetComponent<Rigidbody>();
@@ -260,6 +261,7 @@ public class Player_Controller : MonoBehaviour
     void CameraFollow() 
     {
         Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
+        cameraPositionForCanvas = desiredPosition;
         Vector3 smoothedPosition = Vector3.Lerp(mainCamera.transform.position, desiredPosition, cameraMovementFollowUpSpeed);
         mainCamera.transform.position = smoothedPosition;
     }
