@@ -21,7 +21,7 @@ public class Player_Controller : MonoBehaviour
     public float dashForce = 50.0f;
     private bool inDash = false;
     private bool dashInCooldown = false;
-    private float dashCounter = 0.0f;
+    public float dashCounter = 0.0f;
 
     [Header("Shooting variables")]
     public Transform canonPosition;
