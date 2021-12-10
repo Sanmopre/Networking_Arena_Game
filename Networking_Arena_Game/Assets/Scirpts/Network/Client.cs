@@ -287,7 +287,9 @@ public class Client : MonoBehaviour
                             state = State.DISCONNECTED;
                             break;
                         case UDP.RecvType.MESSAGE:
-                            NetworkStream.Data data = NetworkStream.Deserialize(received, ref lastRecvID);
+                            NetworkStream.Data data = NetworkStream.Deserialize(received);
+                            if (data == null)
+                                break;
 
                             for (int i = 0; i < data.functions.Count; ++i)
                             {
@@ -300,8 +302,11 @@ public class Client : MonoBehaviour
                                     NetObject netObj = FindNetObject(data.objects[i].netId);
                                     if (netObj == null)
                                         continue;
-                                    netObj.rb.position = data.objects[i].position;
-                                    netObj.rb.velocity = data.objects[i].velocity;
+                                    if (netObj.rb.velocity != data.objects[i].velocity)
+                                    {
+                                        netObj.rb.position = data.objects[i].position;
+                                        netObj.rb.velocity = data.objects[i].velocity;
+                                    }
                                 }
 
                             lastRecvID = data.id;

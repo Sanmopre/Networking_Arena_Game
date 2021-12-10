@@ -22,7 +22,7 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly float MSG_WAIT_TIME = 3.0f;
     [HideInInspector]
-    static public readonly float SEND_RATE = 0.1f;
+    static public readonly float SEND_RATE = 0.05f;
     [HideInInspector]
     static public readonly byte MESSAGE_SEPARATOR = Encoding.UTF8.GetBytes("\\")[0];
 
@@ -280,17 +280,14 @@ public class UDP : MonoBehaviour
             return;
         }
 
+        inputPacket = ByteArray.TrimEnd(inputPacket);
+        OutputStream stream = new OutputStream(inputPacket);
         List<byte[]> messages = new List<byte[]>();
-        List<byte> currentMessage = new List<byte>();
-        for (int i = 0; i < bytesRecv; ++i)
+
+        while (!stream.ReachedEnd())
         {
-            if (inputPacket[i] == MESSAGE_SEPARATOR)
-            {
-                messages.Add(currentMessage.ToArray());
-                currentMessage.Clear();
-            }
-            else
-                currentMessage.Add(inputPacket[i]);
+            int size = stream.GetInt();
+            messages.Add(stream.GetBytes(size));
         }
 
         for (int m = 0; m < messages.Count; ++m)
@@ -298,7 +295,25 @@ public class UDP : MonoBehaviour
             byte[] message = messages[m];
 
             int idSize = sizeof(int);
-            int recvID = BitConverter.ToInt32(message, 0);
+            int recvID;
+            try
+            {
+                recvID = BitConverter.ToInt32(message, 0);
+            }
+            catch
+            {
+                recvID = -1;
+                byte[] p = inputPacket;
+                for (int a = 0; a < p.Length; ++a)
+                {
+                    if (p[a] == '\0')
+                        p.SetValue(Encoding.UTF8.GetBytes("X")[0], a);
+                }
+                Debug.Log("Server Client " + name + " message procesing ERROR -> Current Message num: " + m + " | Current Message Lenght: " + message.Length);
+                Debug.Log("Server Client " + name + " message procesing ERROR -> Packet Received: " + Encoding.UTF8.GetString(p));
+                if (message.Length == 0)
+                    return;
+            }
 
             if (message.Length != idSize) // check if it is an acknoledgement package
             {
@@ -311,9 +326,20 @@ public class UDP : MonoBehaviour
                 for (int i = 0; i < notAcknowleged.Count; ++i)
                     if (notAcknowleged[i].value.GetID() == recvID)
                     {
-                        if (notAcknowleged[i].value.data.Length > idSize)
+                        try
+                        {
                             if (ByteArray.Compare(notAcknowleged[i].value.data, DISCONNECT, idSize))
                                 recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_END, notAcknowleged[i].value.data, from));
+                        }
+                        catch 
+                        {
+                            for (int a = 0; a < notAcknowleged[i].value.data.Length; ++a)
+                            {
+                                if (notAcknowleged[i].value.data[a] == '\0')
+                                    notAcknowleged[i].value.data.SetValue(Encoding.UTF8.GetBytes("X")[0], a);
+                            }
+                            Debug.Log("Server Client " + name + " aknowledgemet ERROR " + Encoding.UTF8.GetString(notAcknowleged[i].value.data));
+                        }
 
                         notAcknowleged.RemoveAt(i);
                         exit = true;
@@ -410,27 +436,25 @@ public class UDP : MonoBehaviour
 
     void SendPackets()
     {
-        byte[] toSend = new byte[currentBufferSize];
+        InputStream stream;
         while (sendBuffer.Count != 0)
         {
-            int lastIndex = 0;
+            stream = new InputStream();
             EndPoint currentRemote = sendBuffer[0].to;
             for (int i = 0; i < sendBuffer.Count; ++i)
             {
                 SendPacket packet = sendBuffer[i];
                 if (currentRemote.ToString() == packet.to.ToString())
                 {
-                    packet.message.CopyTo(toSend, lastIndex);
-                    lastIndex += packet.message.Length;
-                    toSend.SetValue(MESSAGE_SEPARATOR, lastIndex);
-                    ++lastIndex;
+                    stream.AddInt(packet.message.Length);
+                    stream.AddBytes(packet.message);
 
                     sendBuffer.RemoveAt(i);
                     --i;
                 }
             }
 
-            SendMessage(toSend, currentRemote);
+            SendMessage(stream.GetBuffer(), currentRemote);
         }
 
         currentBufferSize = 0;
@@ -472,10 +496,10 @@ public class UDP : MonoBehaviour
 
     // --- Shady stuffy ---
 
-    bool jitter = false;
+    bool jitter = true;
     bool packetLoss = false;
     int minJitt = 0;
-    int maxJitt = 300;
+    int maxJitt = 50;
     int lossThreshold = 50;
 
     static readonly object myLock = new object();

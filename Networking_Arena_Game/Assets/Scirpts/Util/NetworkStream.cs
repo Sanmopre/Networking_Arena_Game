@@ -24,9 +24,10 @@ public class NetworkStream
         FUNCTION = 1,
         FNC_NEW = 2,
         FNC_NEW_REPLY = 3,
-        FNC_DESTROY = 4,
-        OBJ_BULLET = 5,
-        OBJ_GRENADE = 6
+        FNC_HIT = 4,
+        FNC_HIT_REPLY = 5,
+        OBJ_BULLET = 6,
+        OBJ_GRENADE = 7
     }
 
     public void AddIdData(int id)
@@ -43,10 +44,11 @@ public class NetworkStream
         ++fncCount;
     }
 
-    public void AddDestroyFunction(int netId)
+    public void AddHitFunction(int netId, int damage)
     {
-        fncData.Write(BitConverter.GetBytes((int)Keyword.FNC_DESTROY), 0, INT_SIZE);
+        fncData.Write(BitConverter.GetBytes((int)Keyword.FNC_HIT), 0, INT_SIZE);
         fncData.Write(BitConverter.GetBytes(netId), 0, INT_SIZE);
+        fncData.Write(BitConverter.GetBytes(damage), 0, INT_SIZE);
 
         ++fncCount;
     }
@@ -106,16 +108,18 @@ public class NetworkStream
     // --- Output --- 
     public struct Function
     {
-        public Function(Keyword functionType, int netId, Keyword objType)
+        public Function(Keyword functionType, int netId, Keyword objType, int damage)
         {
             this.functionType = functionType;
             this.netId = netId;
             this.objType = objType;
+            this.damage = damage;
         }
 
         public Keyword functionType;
         public int netId;
         public Keyword objType;
+        public int damage;
     }
     public struct Object
     {
@@ -142,7 +146,7 @@ public class NetworkStream
         public List<Object> objects = new List<Object>();
     }
 
-    public static Data Deserialize(byte[] data, ref int lastId)
+    public static Data Deserialize(byte[] data)
     {
         MemoryStream stream = new MemoryStream(data);
         byte[] buffer = new byte[16];
@@ -182,20 +186,24 @@ public class NetworkStream
                             return null;
                         Keyword objType = (Keyword)BitConverter.ToInt32(buffer, 0);
 
-                        retData.functions.Add(new Function(functionType, netId, objType));
+                        retData.functions.Add(new Function(functionType, netId, objType, 0));
                         break;
-                    case Keyword.FNC_DESTROY:
-                        retData.functions.Add(new Function(functionType, netId, Keyword.NULL));
+                    case Keyword.FNC_HIT:
+                        if (stream.Read(buffer, 0, INT_SIZE) == 0)
+                            return null;
+                        int damage = BitConverter.ToInt32(buffer, 0);
+
+                        retData.functions.Add(new Function(functionType, netId, Keyword.NULL, damage));
                         break;
                 }
             }
 
-            if (stream.Read(buffer, 0, INT_SIZE) == 0 || retData.id < lastId)
+            if (stream.Read(buffer, 0, INT_SIZE) == 0)
                 return retData;
             type = (Keyword)BitConverter.ToInt32(buffer, 0);
         }
 
-        if (type == Keyword.OBJECT)
+        if (type == Keyword.OBJECT) // ADD NEW REPLY AND HIT REPLY AND WATCH FOR ERRORS
         {
             if (stream.Read(buffer, 0, INT_SIZE) == 0)
                 return null;
@@ -273,6 +281,11 @@ public class InputStream
         stream.Write(Encoding.UTF8.GetBytes(s), 0, s.Length);
     }
 
+    public void AddBytes(byte[] b)
+    {
+        stream.Write(b, 0, b.Length);
+    }
+
     public byte[] GetBuffer()
     {
         byte[] buffer = stream.GetBuffer();
@@ -283,6 +296,8 @@ public class OutputStream
 {
     MemoryStream stream = null;
     byte[] buffer = new byte[64];
+
+    
 
     private OutputStream() { }
 
@@ -319,5 +334,19 @@ public class OutputStream
         byte[] strBuff = new byte[size];
         stream.Read(strBuff, 0, size);
         return Encoding.UTF8.GetString(strBuff);
+    }
+
+    public byte[] GetBytes(int size)
+    {
+        byte[] strBuff = new byte[size];
+        stream.Read(strBuff, 0, size);
+        return strBuff;
+    }
+
+    public bool ReachedEnd()
+    {
+        if (stream.Position >= stream.Length - 1)
+            return true;
+        return false;
     }
 }
