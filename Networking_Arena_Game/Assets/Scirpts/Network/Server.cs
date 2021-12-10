@@ -266,12 +266,7 @@ public class Server : MonoBehaviour
                         Debug.Log("Server Client " + client.value.name + " received an Error!");
                         continue;
                     case UDP.RecvType.FIN:
-                        for (int a  = 0; a < received.Length; ++a)
-                        {
-                            if (received[a] == '\0')
-                                received.SetValue(Encoding.UTF8.GetBytes("X")[0], a);
-                        }
-                        Debug.Log("Server Client " + client.value.name + " received FIN packet! " + Encoding.UTF8.GetString(received));
+                        Debug.Log("Server Client " + client.value.name + " received FIN packet! ");
                         client.value.state = Client.State.DISCONNECTING;
                         client.value.waitToDisconnect = Time.realtimeSinceStartup;
                         break;
@@ -311,8 +306,24 @@ public class Server : MonoBehaviour
                                 Ref<Client> resendTo = client.value.lobby.value.player1;
                                 if (client == client.value.lobby.value.player1)
                                     resendTo = client.value.lobby.value.player2;
-                            
-                                Debug.Log("Resent Serialized Data from client " + client.value.name + " to client " + resendTo.value.name);
+
+                                NetworkStream.Data data = NetworkStream.Deserialize(received);
+
+                                if (data.functions.Count > 0)
+                                {
+                                    NetworkStream stream = new NetworkStream();
+                                    for (int f = 0; f < data.functions.Count; ++f)
+                                    {
+                                        switch (data.functions[f].functionType)
+                                        {
+                                            case NetworkStream.Keyword.FNC_NEW:
+                                                break;
+                                            case NetworkStream.Keyword.FNC_DESTROY:
+                                                break;
+                                        }
+                                    }
+                                }
+
                                 resendTo.value.socket.Send(received);
                             }
                         }
@@ -324,11 +335,12 @@ public class Server : MonoBehaviour
 
     IEnumerator StartMatch(UDP player1, UDP player2)
     {
+        Debug.Log("Server notified match");
         player1.Send("match found");
         player2.Send("match found");
 
         yield return new WaitForSeconds(5.0f);
-
+        
         InputStream toPlayer1 = new InputStream();
         toPlayer1.AddInt(2);
         toPlayer1.AddInt(0);
@@ -343,6 +355,7 @@ public class Server : MonoBehaviour
         toPlayer2.AddInt(0);
         toPlayer2.AddVector3(new Vector3(-10.0f, 0.5f, 0));
 
+        Debug.Log("Server sent match data");
         player1.Send(toPlayer1.GetBuffer());
         player2.Send(toPlayer2.GetBuffer());
     }
