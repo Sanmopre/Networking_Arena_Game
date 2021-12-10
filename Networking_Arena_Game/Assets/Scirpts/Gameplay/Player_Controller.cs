@@ -53,6 +53,11 @@ public class Player_Controller : MonoBehaviour
     public float grenadeCooldown;
     private float grenadeTimer;
 
+    [Header("Position Helper")]
+    public float distanceThreshold;
+    public GameObject playerPositionHelper;
+    private GameObject enemyPlayer;
+
     [Header("Animator")]
     private Animator animator;
     public float rotateThreshold;
@@ -64,6 +69,7 @@ public class Player_Controller : MonoBehaviour
         myRigidbody = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
         grenadeTimer = grenadeCooldown;
+        enemyPlayer = GameObject.Find("Enemy");
     }
 
 
@@ -75,6 +81,9 @@ public class Player_Controller : MonoBehaviour
         //Firerate
         firerateCount += Time.deltaTime;
         shotCounter += Time.deltaTime;
+
+        //Enemy position tracker
+        ManagePlayerPositionHelper();
     }
     private void FixedUpdate()
     {
@@ -304,5 +313,22 @@ public class Player_Controller : MonoBehaviour
             shotCounter = 0;
             shotgunFireObj.transform.parent = transform;
         }
+    }
+
+    void ManagePlayerPositionHelper() 
+    {
+        
+        if (distanceThreshold < Vector3.Distance(enemyPlayer.transform.position, transform.position)) 
+        {
+            playerPositionHelper.SetActive(true);
+        }
+        else 
+        {
+            playerPositionHelper.SetActive(false);
+        }
+
+        playerPositionHelper.transform.position = new Vector3(transform.position.x, transform.position.y + 0.1f, transform.position.z) ;
+        playerPositionHelper.transform.LookAt(enemyPlayer.transform.position);
+        playerPositionHelper.transform.eulerAngles = new Vector3(0, playerPositionHelper.transform.eulerAngles.y + 180, 0);
     }
 }
