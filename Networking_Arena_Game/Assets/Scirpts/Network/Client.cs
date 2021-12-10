@@ -1,5 +1,5 @@
 using System.Net;
-using System.Text;
+using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -52,10 +52,33 @@ public class Client : MonoBehaviour
     int lastRecvID = 0;
     int lastNetID = 0;
     int playerAmount = 2;
-
-    int playerNetID = 0;
     // --- !Game ---
 
+    // --- NetworkObjects ---
+    class NetObject
+    {
+        public NetObject(int netID, GameObject go, Rigidbody rb, bool owned)
+        {
+            this.netID = netID;
+            this.go = go;
+            this.rb = rb;
+            this.owned = owned;
+        }
+        public int netID;
+        public GameObject go;
+        public Rigidbody rb;
+        public bool owned;
+    }
+    List<NetObject> netObjects = new List<NetObject>();
+
+    NetObject FindNetObject(int netID)
+    {
+        foreach (NetObject netObj in netObjects)
+            if (netObj.netID == netID)
+                return netObj;
+        return null;
+    }
+    // --- !NetworkObjects ---
 
     void Start()
     {
@@ -169,7 +192,7 @@ public class Client : MonoBehaviour
             case State.WAITING_FOR_MATCH:
                 while (toServer.CanReceive())
                 {
-                    string received = "";
+                    string received = null;
                     switch (toServer.Receive(ref received))
                     {
                         case UDP.RecvType.ERROR:
@@ -186,22 +209,56 @@ public class Client : MonoBehaviour
                             }
                             else
                             {
-                                state = State.IN_MENU;
-                                LoadMainMenu();
+                                toServer.Close();
+                                state = State.DISCONNECTED;
                             }
                             break;
                     }
                 }
                 break;
             case State.GAME_SETUP:
-                GameObject go = GameObject.Find("Player");
-                if (go != null)
-                    player = go.GetComponent<Rigidbody>();
-                go = GameObject.Find("Enemy");
-                if (go != null)
-                    enemy = go.GetComponent<Rigidbody>();
+                if (SceneManager.GetActiveScene().name == "Game_Scene")
+                {
+                    while (toServer.CanReceive())
+                    {
+                        byte[] received = null;
+                        switch (toServer.Receive(ref received))
+                        {
+                            case UDP.RecvType.ERROR:
+                                continue;
+                            case UDP.RecvType.FIN:
+                                toServer.Close();
+                                state = State.DISCONNECTED;
+                                break;
+                            case UDP.RecvType.MESSAGE:
+                                OutputStream oStream = new OutputStream(received);
 
-                state = State.IN_GAME;
+                                playerAmount = oStream.GetInt();
+                                int playerNetID = oStream.GetInt();
+                                Vector3 playerPosition = oStream.GetVector3();
+                                int enemyNetID = oStream.GetInt();
+                                Vector3 enemyPosition = oStream.GetVector3();
+
+                                GameObject go = GameObject.Find("Player");
+                                if (go != null)
+                                {
+                                    NetObject no = new NetObject(playerNetID, go, go.GetComponent<Rigidbody>(), true);
+                                    no.rb.position = playerPosition;
+                                    netObjects.Add(no);
+                                }
+                                go = GameObject.Find("Enemy");
+                                if (go != null)
+                                {
+                                    NetObject no = new NetObject(enemyNetID, go, go.GetComponent<Rigidbody>(), false);
+                                    no.rb.position = enemyPosition;
+                                    netObjects.Add(no);
+                                }
+
+                                state = State.IN_GAME;
+                                break;
+                        }
+                    }
+                }
                 break;
             case State.IN_GAME:
                 if (Time.realtimeSinceStartup >= lastDataSent + UDP.SEND_RATE)
@@ -210,7 +267,9 @@ public class Client : MonoBehaviour
                     stream.AddIdData(sendID);
                     ++sendID;
 
-                    stream.AddObject(playerNetID, player.position, player.velocity);
+                    foreach(NetObject netObj in netObjects)
+                        if (netObj.owned)
+                            stream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity);
 
                     toServer.Send(stream.GetBuffer());
 
@@ -238,9 +297,11 @@ public class Client : MonoBehaviour
                             if (lastRecvID < data.id)
                                 for (int i = 0; i < data.objects.Count; ++i)
                                 {
-                                    // FindGameObjectByNetIdOrWhatever(objects[i].netId);
-                                    enemy.position = data.objects[i].position;
-                                    enemy.velocity = data.objects[i].velocity;
+                                    NetObject netObj = FindNetObject(data.objects[i].netId);
+                                    if (netObj == null)
+                                        continue;
+                                    netObj.rb.position = data.objects[i].position;
+                                    netObj.rb.velocity = data.objects[i].velocity;
                                 }
 
                             lastRecvID = data.id;
@@ -372,6 +433,11 @@ public class Client : MonoBehaviour
 
     void LoadIdentificationMenu()
     {
+        if (SceneManager.GetActiveScene().name == "Game_Scene")
+        {
+            SceneManager.LoadScene("Main_Menu_Scene");
+            return;
+        }
         if (menuScript != null)
             menuScript.Log_Out();
         Log("", false);

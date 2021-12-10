@@ -239,3 +239,85 @@ public class NetworkStream
     }
     // --- !Output --- 
 }
+
+public class InputStream
+{
+    MemoryStream stream = new MemoryStream();
+
+    public InputStream() { }
+
+    public void AddInt(int i)
+    {
+        stream.Write(BitConverter.GetBytes(i), 0, sizeof(int));
+    }
+
+    public void AddFloat(float f)
+    {
+        stream.Write(BitConverter.GetBytes(f), 0, sizeof(float));
+    }
+
+    public void AddVector3(Vector3 v)
+    {
+        AddFloat(v.x);
+        AddFloat(v.y);
+        AddFloat(v.z);
+    }
+
+    public void AddBool(bool b)
+    {
+        stream.Write(BitConverter.GetBytes(b), 0, sizeof(bool));
+    }
+
+    public void AddString(string s)
+    {
+        stream.Write(Encoding.UTF8.GetBytes(s), 0, s.Length);
+    }
+
+    public byte[] GetBuffer()
+    {
+        byte[] buffer = stream.GetBuffer();
+        return ByteArray.TrimEnd(buffer);
+    }
+}
+public class OutputStream
+{
+    MemoryStream stream = null;
+    byte[] buffer = new byte[64];
+
+    private OutputStream() { }
+
+    public OutputStream(byte[] str)
+    {
+        stream = new MemoryStream(str);
+    }
+
+    public int GetInt()
+    {
+        stream.Read(buffer, 0, sizeof(int));
+        return BitConverter.ToInt32(buffer, 0);
+    }
+
+    public float GetFloat()
+    {
+        stream.Read(buffer, 0, sizeof(float));
+        return (float)BitConverter.ToDouble(buffer, 0);
+    }
+
+    public Vector3 GetVector3()
+    {
+        return new Vector3(GetFloat(), GetFloat(), GetFloat());
+    }
+
+    public bool GetBool()
+    {
+        stream.Read(buffer, 0, sizeof(bool));
+        return BitConverter.ToBoolean(buffer, 0);
+    }
+
+    public string GetString(int size)
+    {
+        byte[] strBuff = new byte[size];
+        stream.Read(strBuff, 0, size);
+        return Encoding.UTF8.GetString(strBuff);
+    }
+}

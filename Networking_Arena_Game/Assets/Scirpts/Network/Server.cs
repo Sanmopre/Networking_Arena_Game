@@ -263,9 +263,15 @@ public class Server : MonoBehaviour
                 switch (client.value.socket.Receive(ref received))
                 {
                     case UDP.RecvType.ERROR:
+                        Debug.Log("Server Client " + client.value.name + " received an Error!");
                         continue;
                     case UDP.RecvType.FIN:
-                        Debug.Log("Server Client " + client.value.name + " received FIN packet!");
+                        for (int a  = 0; a < received.Length; ++a)
+                        {
+                            if (received[a] == '\0')
+                                received.SetValue(Encoding.UTF8.GetBytes("X")[0], a);
+                        }
+                        Debug.Log("Server Client " + client.value.name + " received FIN packet! " + Encoding.UTF8.GetString(received));
                         client.value.state = Client.State.DISCONNECTING;
                         client.value.waitToDisconnect = Time.realtimeSinceStartup;
                         break;
@@ -278,8 +284,7 @@ public class Server : MonoBehaviour
                                 lobby = lobbies[i];
                                 if (LobbyAddPlayer(lobby, client))
                                 {
-                                    lobby.value.player1.value.socket.Send("match found");
-                                    lobby.value.player2.value.socket.Send("match found");
+                                    StartCoroutine(StartMatch(lobby.value.player1.value.socket, lobby.value.player2.value.socket));
                                     break;
                                 }
                                 lobby = null;
@@ -315,6 +320,31 @@ public class Server : MonoBehaviour
                 }
             }
         }
+    }
+
+    IEnumerator StartMatch(UDP player1, UDP player2)
+    {
+        player1.Send("match found");
+        player2.Send("match found");
+
+        yield return new WaitForSeconds(5.0f);
+
+        InputStream toPlayer1 = new InputStream();
+        toPlayer1.AddInt(2);
+        toPlayer1.AddInt(0);
+        toPlayer1.AddVector3(new Vector3(-10.0f, 0.5f, 0));
+        toPlayer1.AddInt(1);
+        toPlayer1.AddVector3(new Vector3(10.0f, 0.5f, 0));
+
+        InputStream toPlayer2 = new InputStream();
+        toPlayer2.AddInt(2);
+        toPlayer2.AddInt(1);
+        toPlayer2.AddVector3(new Vector3(10.0f, 0.5f, 0));
+        toPlayer2.AddInt(0);
+        toPlayer2.AddVector3(new Vector3(-10.0f, 0.5f, 0));
+
+        player1.Send(toPlayer1.GetBuffer());
+        player2.Send(toPlayer2.GetBuffer());
     }
 
     Ref<Client> FindClientByName(string name, ref int index)

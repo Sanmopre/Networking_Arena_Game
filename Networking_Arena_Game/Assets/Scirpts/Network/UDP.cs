@@ -18,7 +18,7 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly int MAX_RECV_IDS = 100;
     [HideInInspector]
-    static public readonly byte DISCONNECT = Encoding.UTF8.GetBytes("-")[0];
+    static public readonly byte[] DISCONNECT = BitConverter.GetBytes(-1);
     [HideInInspector]
     static public readonly float MSG_WAIT_TIME = 3.0f;
     [HideInInspector]
@@ -180,7 +180,8 @@ public class UDP : MonoBehaviour
     {
         byte[] inputPacket = null;
         RecvType output =  Receive(ref inputPacket, setRemote);
-        message = Encoding.UTF8.GetString(inputPacket);
+        if (inputPacket != null)
+            message = Encoding.UTF8.GetString(inputPacket);
         return output;
     }
 
@@ -258,7 +259,7 @@ public class UDP : MonoBehaviour
         if (packet.type == RecvType.FIN_START || packet.type == RecvType.FIN_END)
             packet.type = RecvType.FIN;
 
-            message = packet.message;
+        message = packet.message;
         return packet.type;
     }
 
@@ -311,8 +312,8 @@ public class UDP : MonoBehaviour
                     if (notAcknowleged[i].value.GetID() == recvID)
                     {
                         if (notAcknowleged[i].value.data.Length > idSize)
-                            if (notAcknowleged[i].value.data[idSize] == DISCONNECT)
-                                recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_END, null, from));
+                            if (ByteArray.Compare(notAcknowleged[i].value.data, DISCONNECT, idSize))
+                                recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_END, notAcknowleged[i].value.data, from));
 
                         notAcknowleged.RemoveAt(i);
                         exit = true;
@@ -326,9 +327,9 @@ public class UDP : MonoBehaviour
             for (int i = 0; i < toReceive.Length; ++i)
                 toReceive[i] = message[i + idSize];
 
-            if (toReceive.Length == 1 && toReceive[0] == DISCONNECT)
+            if (ByteArray.Compare(toReceive, DISCONNECT))
             {
-                recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_START, null, from));
+                recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_START, toReceive, from));
                 continue;
             }
 
@@ -347,7 +348,7 @@ public class UDP : MonoBehaviour
         if (outputPacket != null)
             outputPacket = ByteArray.TrimEnd(outputPacket);
         else
-            outputPacket = new byte[1] { DISCONNECT };
+            outputPacket = DISCONNECT;
 
         if (outputPacket.Length > MAX_BUFFER)
         {

@@ -8,8 +8,8 @@
         if (count == 0)
             count = array1.Length - index;
 
-        for (int i = index; i < count; ++i)
-            if (array1[i] != array2[i])
+        for (int i = 0; i < count; ++i)
+            if (array1[i + index] != array2[i])
                 return false;
         return true;
     }
