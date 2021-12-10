@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-
 public class Server : MonoBehaviour
 {
     UDP listener = null;
@@ -318,7 +317,7 @@ public class Server : MonoBehaviour
                                         {
                                             case NetworkStream.Keyword.FNC_NEW:
                                                 break;
-                                            case NetworkStream.Keyword.FNC_DESTROY:
+                                            case NetworkStream.Keyword.FNC_HIT:
                                                 break;
                                         }
                                     }

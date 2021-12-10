@@ -22,7 +22,7 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly float MSG_WAIT_TIME = 3.0f;
     [HideInInspector]
-    static public readonly float SEND_RATE = 0.05f;
+    static public readonly float SEND_RATE = 0.016f;
     [HideInInspector]
     static public readonly byte MESSAGE_SEPARATOR = Encoding.UTF8.GetBytes("\\")[0];
 
@@ -30,6 +30,8 @@ public class UDP : MonoBehaviour
     public EndPoint remoteAddress = null;
     int messageID = 0;
     public bool listenMode = false;
+
+    public float roundTrip = 0.0f;
 
     public string BindAddressStr() { return thisSocket.LocalEndPoint.ToString(); }
     public string RemoteAddressStr() { return remoteAddress.ToString(); }
@@ -65,26 +67,28 @@ public class UDP : MonoBehaviour
     // --- Send ---
     struct SendPacket
     {
-        public SendPacket(byte[] message, EndPoint to)
+        public SendPacket(byte[] data, EndPoint to, Ref<Message> message)
         {
-            this.message = message;
+            this.data = data;
             this.to = to;
+            this.message = message;
         }
 
-        public byte[] message;
+        public byte[] data;
         public EndPoint to;
+        public Ref<Message> message;
     }
 
-    void AddSendPacket(byte[] message, EndPoint to)
+    void AddSendPacket(byte[] data, EndPoint to, Ref<Message> message)
     {
-        currentBufferSize += message.Length + 1; // + 1 because of the separator
+        currentBufferSize += data.Length + 1; // + 1 because of the separator
         if (currentBufferSize >= MAX_BUFFER)
         {
             SendPackets();
-            currentBufferSize += message.Length + 1;
+            currentBufferSize += data.Length + 1;
         }
 
-        sendBuffer.Add(new SendPacket(message, to));
+        sendBuffer.Add(new SendPacket(data, to, message));
     }
 
     List<SendPacket> sendBuffer = new List<SendPacket>();
@@ -99,7 +103,7 @@ public class UDP : MonoBehaviour
         {
             this.id = id;
             this.data = data;
-            start = Time.realtimeSinceStartup;
+            start = 0.0f;
             this.from = from;
         }
 
@@ -341,6 +345,7 @@ public class UDP : MonoBehaviour
                             Debug.Log("Server Client " + name + " aknowledgemet ERROR " + Encoding.UTF8.GetString(notAcknowleged[i].value.data));
                         }
 
+                        roundTrip = Time.realtimeSinceStartup - notAcknowleged[i].value.start;
                         notAcknowleged.RemoveAt(i);
                         exit = true;
                         break;
@@ -397,7 +402,7 @@ public class UDP : MonoBehaviour
         message.value.data = toSend;
 
         ReportError("UDP_" + name  + " Sent Message -> " + message.value.GetID());
-        AddSendPacket(toSend, remoteAddress);
+        AddSendPacket(toSend, remoteAddress, message);
 
         if (!listenMode)
             notAcknowleged.Add(message);
@@ -415,7 +420,7 @@ public class UDP : MonoBehaviour
         }
         
         ReportError("UDP_" + name + " Sent Acknowledgement -> " + id);
-        AddSendPacket(BitConverter.GetBytes(id), to);
+        AddSendPacket(BitConverter.GetBytes(id), to, null);
 
         return true;
     }
@@ -429,7 +434,7 @@ public class UDP : MonoBehaviour
         }
         
         ReportError("UDP_" + name + " Resent -> " + outputMessage.value.GetID());
-        AddSendPacket(outputMessage.value.data, outputMessage.value.from);
+        AddSendPacket(outputMessage.value.data, outputMessage.value.from, outputMessage);
 
         return true;
     }
@@ -446,8 +451,11 @@ public class UDP : MonoBehaviour
                 SendPacket packet = sendBuffer[i];
                 if (currentRemote.ToString() == packet.to.ToString())
                 {
-                    stream.AddInt(packet.message.Length);
-                    stream.AddBytes(packet.message);
+                    stream.AddInt(packet.data.Length);
+                    stream.AddBytes(packet.data);
+
+                    if (packet.message != null)
+                        MessageRestartTimer(packet.message);
 
                     sendBuffer.RemoveAt(i);
                     --i;

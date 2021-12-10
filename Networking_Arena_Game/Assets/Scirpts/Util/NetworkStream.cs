@@ -17,17 +17,14 @@ public class NetworkStream
 
     readonly static int INT_SIZE = sizeof(int);
     readonly static int DOUBLE_SIZE = sizeof(double);
+    readonly static int BOOL_SIZE = sizeof(bool);
     public enum Keyword
     {
         NULL = -1,
         OBJECT = 0,
         FUNCTION = 1,
-        FNC_NEW = 2,
-        FNC_NEW_REPLY = 3,
-        FNC_HIT = 4,
-        FNC_HIT_REPLY = 5,
-        OBJ_BULLET = 6,
-        OBJ_GRENADE = 7
+        FNC_BULLET = 2,
+        FNC_HIT = 3,
     }
 
     public void AddIdData(int id)
@@ -35,19 +32,32 @@ public class NetworkStream
         idData.Write(BitConverter.GetBytes(id), 0, INT_SIZE);
     }
 
-    public void AddNewFunction(int netId, Keyword objType)
+    void AddFunctionHeader(Keyword type, int netId, bool owned)
     {
-        fncData.Write(BitConverter.GetBytes((int)Keyword.FNC_NEW), 0, INT_SIZE);
+        fncData.Write(BitConverter.GetBytes((int)type), 0, INT_SIZE);
         fncData.Write(BitConverter.GetBytes(netId), 0, INT_SIZE);
-        fncData.Write(BitConverter.GetBytes((int)objType), 0, INT_SIZE);
+        fncData.Write(BitConverter.GetBytes(owned), 0, BOOL_SIZE);
+    }
+
+    public void AddBulletFunction(int netId, bool owned, Vector3 position, Vector3 velocity)
+    {
+        AddFunctionHeader(Keyword.FNC_BULLET, netId, owned);
+
+        fncData.Write(BitConverter.GetBytes((double)position.x), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)position.y), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)position.z), 0, DOUBLE_SIZE);
+
+        fncData.Write(BitConverter.GetBytes((double)velocity.x), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)velocity.y), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)velocity.z), 0, DOUBLE_SIZE);
 
         ++fncCount;
     }
 
-    public void AddHitFunction(int netId, int damage)
+    public void AddHitFunction(int netId, bool owned, int damage)
     {
-        fncData.Write(BitConverter.GetBytes((int)Keyword.FNC_HIT), 0, INT_SIZE);
-        fncData.Write(BitConverter.GetBytes(netId), 0, INT_SIZE);
+        AddFunctionHeader(Keyword.FNC_HIT, netId, owned);
+
         fncData.Write(BitConverter.GetBytes(damage), 0, INT_SIZE);
 
         ++fncCount;
@@ -108,17 +118,26 @@ public class NetworkStream
     // --- Output --- 
     public struct Function
     {
-        public Function(Keyword functionType, int netId, Keyword objType, int damage)
+        public Function(Keyword functionType, int netId, bool owned, Vector3 position, Vector3 velocity, int damage)
         {
             this.functionType = functionType;
             this.netId = netId;
-            this.objType = objType;
+            this.owned = owned;
+
+            this.position = position;
+            this.velocity = velocity;
+
             this.damage = damage;
         }
 
+        // FUNCTION
         public Keyword functionType;
         public int netId;
-        public Keyword objType;
+        public bool owned;
+        // BULLET
+        public Vector3 position;
+        public Vector3 velocity;
+        // HIT
         public int damage;
     }
     public struct Object
@@ -148,96 +167,58 @@ public class NetworkStream
 
     public static Data Deserialize(byte[] data)
     {
-        MemoryStream stream = new MemoryStream(data);
+        OutputStream stream = new OutputStream(data);
         byte[] buffer = new byte[16];
 
-        if (stream.Read(buffer, 0, INT_SIZE) == 0)
-            return null;
-        int id = BitConverter.ToInt32(buffer, 0);
+        int id = stream.GetInt();
 
         Data retData = new Data(id);
 
-        if (stream.Read(buffer, 0, INT_SIZE) == 0)
-            return null;
-        Keyword type = (Keyword)BitConverter.ToInt32(buffer, 0);
+        Keyword type = (Keyword)stream.GetInt();
 
         if (type == Keyword.FUNCTION)
         {
-            if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                return null;
-            int count = BitConverter.ToInt32(buffer, 0);
+            int count = stream.GetInt();
             if (count == 0)
                 return null;
 
             for (int i = 0; i < count; ++i)
             {
-                if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                    return null;
-                Keyword functionType = (Keyword)BitConverter.ToInt32(buffer, 0);
-
-                if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                    return null;
-                int netId = BitConverter.ToInt32(buffer, 0);
+                Keyword functionType = (Keyword)stream.GetInt();
+                int netId = stream.GetInt();
+                bool owned = stream.GetBool();
 
                 switch (functionType)
                 {
-                    case Keyword.FNC_NEW: // TODO: add "NEW_REPLY" function
-                        if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                            return null;
-                        Keyword objType = (Keyword)BitConverter.ToInt32(buffer, 0);
+                    case Keyword.FNC_BULLET:
+                        Vector3 position = stream.GetVector3();
+                        Vector3 velocity = stream.GetVector3();
 
-                        retData.functions.Add(new Function(functionType, netId, objType, 0));
+                        retData.functions.Add(new Function(functionType, netId, owned, position, velocity, 0));
                         break;
                     case Keyword.FNC_HIT:
-                        if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                            return null;
-                        int damage = BitConverter.ToInt32(buffer, 0);
+                        int damage = stream.GetInt();
 
-                        retData.functions.Add(new Function(functionType, netId, Keyword.NULL, damage));
+                        retData.functions.Add(new Function(functionType, netId, owned, Vector3.zero, Vector3.zero, damage));
                         break;
                 }
             }
 
-            if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                return retData;
-            type = (Keyword)BitConverter.ToInt32(buffer, 0);
+            type = (Keyword)stream.GetInt();
         }
 
-        if (type == Keyword.OBJECT) // ADD NEW REPLY AND HIT REPLY AND WATCH FOR ERRORS
+        if (type == Keyword.OBJECT)
         {
-            if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                return null;
-            int count = BitConverter.ToInt32(buffer, 0);
+            int count = stream.GetInt();
             if (count == 0)
                 return null;
 
             for (int i = 0; i < count; ++i)
             {
-                if (stream.Read(buffer, 0, INT_SIZE) == 0)
-                    return null;
-                int netId = BitConverter.ToInt32(buffer, 0);
+                int netId = stream.GetInt();
 
-                Vector3 position = new Vector3();
-                if (stream.Read(buffer, 0, DOUBLE_SIZE) == 0)
-                    return null;
-                position.x = (float)BitConverter.ToDouble(buffer, 0);
-                if (stream.Read(buffer, 0, DOUBLE_SIZE) == 0)
-                    return null;
-                position.y = (float)BitConverter.ToDouble(buffer, 0);
-                if (stream.Read(buffer, 0, DOUBLE_SIZE) == 0)
-                    return null;
-                position.z = (float)BitConverter.ToDouble(buffer, 0);
-                
-                Vector3 velocity = new Vector3();
-                if (stream.Read(buffer, 0, DOUBLE_SIZE) == 0)
-                    return null;
-                velocity.x = (float)BitConverter.ToDouble(buffer, 0);
-                if (stream.Read(buffer, 0, DOUBLE_SIZE) == 0)
-                    return null;
-                velocity.y = (float)BitConverter.ToDouble(buffer, 0);
-                if (stream.Read(buffer, 0, DOUBLE_SIZE) == 0)
-                    return null;
-                velocity.z = (float)BitConverter.ToDouble(buffer, 0);
+                Vector3 position = stream.GetVector3();
+                Vector3 velocity = stream.GetVector3();
 
                 retData.objects.Add(new Object(netId, position, velocity));
             }
