@@ -51,7 +51,7 @@ public class Player_Controller : MonoBehaviour
     bool missileComming = false;
     Vector3 explotionPosition;    
     public float grenadeCooldown;
-    private float grenadeTimer;
+    public float grenadeTimer;
 
     [Header("Position Helper")]
     public float distanceThreshold;
