@@ -315,7 +315,7 @@ public class Server : MonoBehaviour
                                     {
                                         switch (data.functions[f].functionType)
                                         {
-                                            case NetworkStream.Keyword.FNC_NEW:
+                                            case NetworkStream.Keyword.FNC_BULLET:
                                                 break;
                                             case NetworkStream.Keyword.FNC_HIT:
                                                 break;
