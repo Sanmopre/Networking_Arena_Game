@@ -22,6 +22,7 @@ public class Player_Controller : MonoBehaviour
     private bool inDash = false;
     private bool dashInCooldown = false;
     public float dashCounter = 0.0f;
+    public bool firstDash = false;
 
     [Header("Shooting variables")]
     public Transform canonPosition;
@@ -139,6 +140,11 @@ public class Player_Controller : MonoBehaviour
 
     private void Dash(Vector3 dashDirection) 
     {
+        if (!firstDash) 
+        {
+            firstDash = true;
+        }
+
         //diagonal force correction
         if(dashDirection.x != 0 && dashDirection.z != 0) 
         { 
@@ -166,7 +172,7 @@ public class Player_Controller : MonoBehaviour
     void GetMoveInput()
     {
         moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
-        if (Input.GetKeyDown(KeyCode.Space) && dashInCooldown == false)
+        if (Input.GetKeyDown(KeyCode.Space) && dashInCooldown == false && (moveInput.x != 0 || moveInput.z != 0))
         {
             Dash(moveInput * dashForce * 100);
         }

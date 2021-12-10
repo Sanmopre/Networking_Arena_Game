@@ -94,13 +94,13 @@ public class Game_Menu_Manager : MonoBehaviour
 
         for (int i = 0; i < gameManager.Player1.lives; i++) 
         {
-            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(canvasOffSet.x -126 - (i * distance_offset_x), canvasOffSet.y + distance_offset_y, canvasOffSet.z ), Quaternion.identity);
+            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(UIPlayer1LiveCount.transform.position.x -  (i * distance_offset_x), UIPlayer1LiveCount.transform.position.y, UIPlayer1LiveCount.transform.position.z), Quaternion.identity);
             new_ui.transform.parent = UIPlayer1LiveCount.transform;
         }
 
         for (int i = 0; i < gameManager.Player2.lives; i++)
         {
-            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(canvasOffSet.x + 126 + (i * distance_offset_x), canvasOffSet.y + distance_offset_y, canvasOffSet.z), Quaternion.identity);
+            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(UIPlayer2LiveCount.transform.position.x + (i * distance_offset_x), UIPlayer2LiveCount.transform.position.y, UIPlayer2LiveCount.transform.position.z), Quaternion.identity);
             new_ui.transform.parent = UIPlayer2LiveCount.transform;
         }
     }

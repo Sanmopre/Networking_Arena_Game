@@ -16,6 +16,15 @@ public class AbilitiesCDManagerDash : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        cd.fillAmount = 1 - (player.dashCounter / player.dashCooldown);
+        //quite dirty fix, whateva
+        if (!player.firstDash) 
+        {
+            cd.fillAmount = 0;
+        }
+        else
+        {
+            cd.fillAmount = 1 - (player.dashCounter / player.dashCooldown);
+        }
+       
     }
 }
