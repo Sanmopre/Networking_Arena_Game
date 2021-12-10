@@ -2405,7 +2405,7 @@ MonoBehaviour:
   explotionDuration: 1
   grenadeCooldown: 2
   grenadeTimer: 0
-  distanceThreshold: 55
+  distanceThreshold: {x: 55, y: 42}
   playerPositionHelper: {fileID: 400344590}
   rotateThreshold: 0.5
   cameraPositionForCanvas: {x: 0, y: 0, z: 0}

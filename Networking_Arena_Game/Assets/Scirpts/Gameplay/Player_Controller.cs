@@ -54,7 +54,7 @@ public class Player_Controller : MonoBehaviour
     public float grenadeTimer;
 
     [Header("Position Helper")]
-    public float distanceThreshold;
+    public Vector2 distanceThreshold;
     public GameObject playerPositionHelper;
     private GameObject enemyPlayer;
 
@@ -318,7 +318,7 @@ public class Player_Controller : MonoBehaviour
     void ManagePlayerPositionHelper() 
     {
         
-        if (distanceThreshold < Vector3.Distance(enemyPlayer.transform.position, transform.position)) 
+        if (distanceThreshold.x < Mathf.Abs(transform.position.x - enemyPlayer.transform.position.x) || distanceThreshold.y < Mathf.Abs(transform.position.z - enemyPlayer.transform.position.z))
         {
             playerPositionHelper.SetActive(true);
         }
