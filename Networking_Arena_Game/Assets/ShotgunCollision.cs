@@ -2,10 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Explotion_Script : MonoBehaviour
+public class ShotgunCollision : MonoBehaviour
 {
     private Game_Manager game;
-    private GameObject gameObj;
     bool doDamage = false;
     private void Start()
     {
@@ -15,18 +14,20 @@ public class Explotion_Script : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (doDamage) 
+        if (doDamage)
         {
             doDamage = false;
-            game.TakeDamage(game.missileDamage, 2);
+            game.TakeDamage(game.shotgunDamage, 2);
         }
+        //Debug.Log("sdfsd");
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        Debug.Log("sdfsd");
         if (other.gameObject.name == "Enemy")
         {
-            //dumb work arround cuase i dont know why the F "game" is null inside here but not in update
+            Debug.Log("sdfsd");
             doDamage = true;
         }
 

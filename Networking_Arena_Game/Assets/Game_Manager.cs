@@ -25,7 +25,14 @@ public class Game_Manager : MonoBehaviour
     //Damage stats
     public int bulletDamage = 3;
     public int missileDamage = 20;
- 
+    public int shotgunDamage = 15;
+
+    //Respawn points
+    public GameObject respawnPositionEnemy;
+    public GameObject respawnPositionPlayer;
+    private GameObject playerObject;
+    private GameObject enemyObject;
+
     public Game_Menu_Manager menu_manager;
     
     void Start()
@@ -35,6 +42,9 @@ public class Game_Manager : MonoBehaviour
 
         Player.lives = numberOfLifes;
         Enemy.lives = numberOfLifes;
+
+        playerObject = GameObject.Find("Player");
+        enemyObject = GameObject.Find("Enemy");
 
         gameStarted = true;
     }
@@ -94,10 +104,12 @@ public class Game_Manager : MonoBehaviour
     private void Respawn_Enemy() 
     {
         Enemy.hp = player_HP;
+        enemyObject.transform.position = respawnPositionEnemy.transform.position;
     }
 
     private void Respawn_Player()
     {
         Player.hp = player_HP;
+        playerObject.transform.position = respawnPositionPlayer.transform.position;
     }
 }

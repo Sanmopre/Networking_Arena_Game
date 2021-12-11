@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6729018909231248513}
   - component: {fileID: 5306618350480866358}
+  - component: {fileID: -4719795567069425491}
   m_Layer: 0
   m_Name: ConeAttack
   m_TagString: Untagged
@@ -39,8 +40,20 @@ BoxCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2189746706254249016}
   m_Material: {fileID: 0}
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_Enabled: 1
   serializedVersion: 2
   m_Size: {x: 7.597015, y: 3.8662071, z: 10.217165}
   m_Center: {x: 0, y: 0, z: 4.6085825}
+--- !u!114 &-4719795567069425491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2189746706254249016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9e2cd7f9b1064c4e92fc38c0608dfda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

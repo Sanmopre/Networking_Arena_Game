@@ -19,9 +19,13 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[1]
       value: 
       objectReference: {fileID: 2100000, guid: e2ed852ace562954d99724eda5290290, type: 2}
+    - target: {fileID: 6206393302711396022, guid: d582e24119de2fa48829a943f469f5a9, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6206393302711396023, guid: d582e24119de2fa48829a943f469f5a9, type: 3}
       propertyPath: m_Name
-      value: CrosshairPrefabNew
+      value: CrosshairPrefabNew Variant
       objectReference: {fileID: 0}
     - target: {fileID: 6206393302711396027, guid: d582e24119de2fa48829a943f469f5a9, type: 3}
       propertyPath: m_RootOrder
