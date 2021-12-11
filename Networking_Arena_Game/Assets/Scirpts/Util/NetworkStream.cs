@@ -242,7 +242,7 @@ public class InputStream
 
     public void AddFloat(float f)
     {
-        stream.Write(BitConverter.GetBytes(f), 0, sizeof(float));
+        stream.Write(BitConverter.GetBytes((double)f), 0, sizeof(double));
     }
 
     public void AddVector3(Vector3 v)
@@ -278,8 +278,6 @@ public class OutputStream
     MemoryStream stream = null;
     byte[] buffer = new byte[64];
 
-    
-
     private OutputStream() { }
 
     public OutputStream(byte[] str)
@@ -295,7 +293,7 @@ public class OutputStream
 
     public float GetFloat()
     {
-        stream.Read(buffer, 0, sizeof(float));
+        stream.Read(buffer, 0, sizeof(double));
         return (float)BitConverter.ToDouble(buffer, 0);
     }
 

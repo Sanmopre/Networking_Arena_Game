@@ -1,5 +1,6 @@
 using System.Net;
 using System.Collections.Generic;
+using System.Text;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -52,6 +53,8 @@ public class Client : MonoBehaviour
     int lastRecvID = 0;
     int lastNetID = 0;
     int playerAmount = 2;
+    int updatesInASecond = 0;
+    float forTheSecond = 0;
     // --- !Game ---
 
     // --- NetworkObjects ---
@@ -192,6 +195,7 @@ public class Client : MonoBehaviour
             case State.WAITING_FOR_MATCH:
                 while (toServer.CanReceive())
                 {
+                    bool exit = false;
                     string received = null;
                     switch (toServer.Receive(ref received))
                     {
@@ -206,27 +210,34 @@ public class Client : MonoBehaviour
                             {
                                 state = State.GAME_SETUP;
                                 SceneManager.LoadScene("Game_Scene");
+                                Debug.Log("Got into a game");
                             }
                             else
                             {
                                 toServer.Close();
                                 state = State.DISCONNECTED;
                             }
+                            exit = true;
                             break;
                     }
+                    if (exit)
+                        break;
                 }
                 break;
             case State.GAME_SETUP:
                 if (SceneManager.GetActiveScene().name == "Game_Scene")
                 {
+                    Debug.Log("Loaded game scene");
                     while (toServer.CanReceive())
                     {
+                        bool exit = false;
                         byte[] received = null;
                         switch (toServer.Receive(ref received))
                         {
                             case UDP.RecvType.ERROR:
                                 continue;
                             case UDP.RecvType.FIN:
+                                Debug.Log("Game Setup Error");
                                 toServer.Close();
                                 state = State.DISCONNECTED;
                                 break;
@@ -245,6 +256,7 @@ public class Client : MonoBehaviour
                                     NetObject no = new NetObject(playerNetID, go, go.GetComponent<Rigidbody>(), true);
                                     no.rb.position = playerPosition;
                                     netObjects.Add(no);
+                                    Debug.Log("Added player");
                                 }
                                 go = GameObject.Find("Enemy");
                                 if (go != null)
@@ -252,34 +264,47 @@ public class Client : MonoBehaviour
                                     NetObject no = new NetObject(enemyNetID, go, go.GetComponent<Rigidbody>(), false);
                                     no.rb.position = enemyPosition;
                                     netObjects.Add(no);
+                                    Debug.Log("Added enemy");
                                 }
 
                                 state = State.IN_GAME;
+                                exit = true;
                                 break;
                         }
+                        if (exit)
+                            break;
                     }
                 }
                 break;
             case State.IN_GAME:
                 if (Time.realtimeSinceStartup >= lastDataSent + UDP.SEND_RATE)
                 {
+                    updatesInASecond++;
                     NetworkStream stream = new NetworkStream();
                     stream.AddIdData(sendID);
                     ++sendID;
-
-                    foreach(NetObject netObj in netObjects)
+                    Debug.Log(toServer.GetRoundTripTime());
+                    foreach (NetObject netObj in netObjects)
                         if (netObj.owned)
-                            stream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity);
+                            stream.AddObject(netObj.netID, netObj.rb.position + netObj.rb.velocity * toServer.GetRoundTripTime(), netObj.rb.velocity);
 
                     toServer.Send(stream.GetBuffer());
 
                     lastDataSent = Time.realtimeSinceStartup;
+                }
+                if (Time.realtimeSinceStartup >= forTheSecond + 1.0f)
+                {
+                    Debug.Log("Sent Messages this second: " + updatesInASecond);
+                    updatesInASecond = 0;
+                    forTheSecond = Time.realtimeSinceStartup;
                 }
                 while (toServer.CanReceive())
                 {
                     byte[] received = null;
                     switch (toServer.Receive(ref received))
                     {
+                        case UDP.RecvType.EMPTY:
+                            continue;
                         case UDP.RecvType.ERROR:
                             continue;
                         case UDP.RecvType.FIN:
@@ -290,26 +315,23 @@ public class Client : MonoBehaviour
                             NetworkStream.Data data = NetworkStream.Deserialize(received);
                             if (data == null)
                                 break;
-
                             for (int i = 0; i < data.functions.Count; ++i)
                             {
 
                             }
 
                             if (lastRecvID < data.id)
+                            {
                                 for (int i = 0; i < data.objects.Count; ++i)
                                 {
-                                    NetObject netObj = FindNetObject(data.objects[i].netId);
+                                    NetObject netObj = FindNetObject(1); // data.objects[i].netId // CHANGE BACK
                                     if (netObj == null)
                                         continue;
-                                    if (netObj.rb.velocity != data.objects[i].velocity)
-                                    {
-                                        netObj.rb.position = data.objects[i].position;
-                                        netObj.rb.velocity = data.objects[i].velocity;
-                                    }
+                                    netObj.rb.position = data.objects[i].position;
+                                    netObj.rb.velocity = data.objects[i].velocity;
                                 }
-
-                            lastRecvID = data.id;
+                                lastRecvID = data.id;
+                            }
                             break;
                     }
                 }
@@ -440,7 +462,8 @@ public class Client : MonoBehaviour
     {
         if (SceneManager.GetActiveScene().name == "Game_Scene")
         {
-            SceneManager.LoadScene("Main_Menu_Scene");
+            SceneManager.LoadScene("MainMenuScene");
+            Debug.Log("Back to menu");
             return;
         }
         if (menuScript != null)

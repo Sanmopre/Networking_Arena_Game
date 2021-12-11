@@ -31,7 +31,8 @@ public class UDP : MonoBehaviour
     int messageID = 0;
     public bool listenMode = false;
 
-    public float roundTrip = 0.0f;
+    float roundTrip = 0.0f;
+    public float GetRoundTripTime() { return roundTrip; } // to jordi: mad? what r u gonna do? cry about it? boohoo
 
     public string BindAddressStr() { return thisSocket.LocalEndPoint.ToString(); }
     public string RemoteAddressStr() { return remoteAddress.ToString(); }
@@ -103,7 +104,7 @@ public class UDP : MonoBehaviour
         {
             this.id = id;
             this.data = data;
-            start = 0.0f;
+            start = -1.0f;
             this.from = from;
         }
 
@@ -118,6 +119,8 @@ public class UDP : MonoBehaviour
 
     bool MessageIsTimedOut(Ref<Message> message)
     {
+        if (message.value.start < 0)
+            return false;
         if (Time.realtimeSinceStartup > message.value.start + MSG_WAIT_TIME)
             return true;
         return false;
@@ -206,6 +209,7 @@ public class UDP : MonoBehaviour
             else
             {
                 ReportError("UDP_" + name + " Receive Error: Received a message from an unknown address");
+                message = Encoding.UTF8.GetBytes("unknown address");
                 return RecvType.EMPTY;
             }
 
@@ -216,10 +220,16 @@ public class UDP : MonoBehaviour
             if (!listenMode)
             {
                 if (packet.id <= lastID)
+                {
+                    message = Encoding.UTF8.GetBytes("already received");
                     return RecvType.EMPTY;
+                }
                 for (int i = 0; i < receivedIDs.Count; ++i)
                     if (packet.id == receivedIDs[i])
+                    {
+                        message = Encoding.UTF8.GetBytes("already received");
                         return RecvType.EMPTY;
+                    }
 
                 if (receivedIDs.Count > 0)
                 {
@@ -504,7 +514,7 @@ public class UDP : MonoBehaviour
 
     // --- Shady stuffy ---
 
-    bool jitter = true;
+    bool jitter = false;
     bool packetLoss = false;
     int minJitt = 0;
     int maxJitt = 50;
