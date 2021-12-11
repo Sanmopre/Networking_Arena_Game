@@ -8,29 +8,33 @@ public class Game_Manager : MonoBehaviour
     public struct player
     {
         public int lives;
-        public int hp;
+        public float hp;
         //more stuff im guessing
     }
 
     //In seconds
     public float initial_time = 90;
     public int numberOfLifes = 4;
-    public int player_HP = 100;
+    public float player_HP = 100;
     private bool gameStarted = false;
 
     //players
-    public player Player1;
-    public player Player2;
+    public player Player;
+    public player Enemy;
 
+    //Damage stats
+    public int bulletDamage = 3;
+    public int missileDamage = 20;
+ 
     public Game_Menu_Manager menu_manager;
     
     void Start()
     {
-        Player1.hp = player_HP;
-        Player2.hp = player_HP;
+        Player.hp = player_HP;
+        Enemy.hp = player_HP;
 
-        Player1.lives = numberOfLifes;
-        Player2.lives = numberOfLifes;
+        Player.lives = numberOfLifes;
+        Enemy.lives = numberOfLifes;
 
         gameStarted = true;
     }
@@ -39,6 +43,8 @@ public class Game_Manager : MonoBehaviour
     {
         if (gameStarted)
         TimeManager();
+
+        //Debug.Log(Enemy.hp);
     }
 
     void TimeManager()
@@ -52,19 +58,21 @@ public class Game_Manager : MonoBehaviour
         switch (player)
         {
             case 1:
-                Player1.hp -= damage;
-                if (Player1.hp >= 0)
+                Player.hp -= damage;
+                if (Player.hp <= 0)
                 {
-                    Player1.lives -= 1;
+                    Respawn_Player();
+                    Player.lives -= 1;
                     menu_manager.UpdatePlayerLifesUI();
                     CheckIfWin();
                 }
                 break;
             case 2:
-                Player2.hp -= damage;
-                if (Player2.hp >= 0)
+                Enemy.hp -= damage;
+                if (Enemy.hp <= 0)
                 {
-                    Player2.lives -= 1;
+                    Respawn_Enemy();
+                    Enemy.lives -= 1;
                     menu_manager.UpdatePlayerLifesUI();
                     CheckIfWin();
                 }
@@ -76,11 +84,20 @@ public class Game_Manager : MonoBehaviour
     
     private void CheckIfWin()
     {
-        if (Player2.lives == 0)
-            Debug.Log("Player 1 won");
+        if (Enemy.lives == 0)
+            Debug.Log("Player won");
 
-        if (Player1.lives == 0)
-            Debug.Log("Player 2 won");
+        if (Player.lives == 0)
+            Debug.Log("Enemy won");
     }
     
+    private void Respawn_Enemy() 
+    {
+        Enemy.hp = player_HP;
+    }
+
+    private void Respawn_Player()
+    {
+        Player.hp = player_HP;
+    }
 }
