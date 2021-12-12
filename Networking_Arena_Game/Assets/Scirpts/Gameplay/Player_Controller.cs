@@ -23,6 +23,8 @@ public class Player_Controller : MonoBehaviour
     private bool dashInCooldown = false;
     public float dashCounter = 0.0f;
     public bool firstDash = false;
+    public ParticleSystem dashFx;
+    private ParticleSystem dashParticles;
 
     [Header("Shooting variables")]
     public Transform canonPosition;
@@ -62,6 +64,7 @@ public class Player_Controller : MonoBehaviour
     [Header("Animator")]
     private Animator animator;
     public float rotateThreshold;
+    private float dotProduct;
     //float lookAndMoveAngle;
 
     public Vector3 cameraPositionForCanvas;
@@ -71,6 +74,7 @@ public class Player_Controller : MonoBehaviour
         animator = GetComponent<Animator>();
         grenadeTimer = grenadeCooldown;
         enemyPlayer = GameObject.Find("Enemy");
+        
     }
 
 
@@ -144,9 +148,12 @@ public class Player_Controller : MonoBehaviour
         {
             firstDash = true;
         }
+        dashParticles = Instantiate(dashFx, gameObject.transform);
+        dashParticles.Play();
+        Destroy(dashParticles, 1.0f);
 
         //diagonal force correction
-        if(dashDirection.x != 0 && dashDirection.z != 0) 
+        if (dashDirection.x != 0 && dashDirection.z != 0) 
         { 
             myRigidbody.AddForce(dashDirection / 2, ForceMode.Impulse);
         }
@@ -154,6 +161,8 @@ public class Player_Controller : MonoBehaviour
         {
             myRigidbody.AddForce(dashDirection, ForceMode.Impulse);
         }
+
+        gameObject.GetComponentInChildren<SkinnedMeshRenderer>().enabled = false;
         dashInCooldown = true;
         inDash = true;
         dashCounter = 0.0f;
@@ -162,8 +171,11 @@ public class Player_Controller : MonoBehaviour
     private void DashCountersLogic() 
     {
         dashCounter += Time.deltaTime;
-        if(dashCounter > dashDuration)
+        if(dashCounter > dashDuration && !gameObject.GetComponentInChildren<SkinnedMeshRenderer>().enabled)
+        {
+            gameObject.GetComponentInChildren<SkinnedMeshRenderer>().enabled = true;
             inDash = false;
+        }
 
         if (dashCounter > dashCooldown)
             dashInCooldown = false;
@@ -210,16 +222,7 @@ public class Player_Controller : MonoBehaviour
     }
     void AnimatePlayer()
     {
-        //The function below will return the degrees between the point to look and the movement input so we can 
-        // properly define the corresponding animation, the last parameter is the one the other two revolve around.
-
-        //lookAndMoveAngle = Vector3.SignedAngle(moveInput.normalized, pointToLook.normalized, gameObject.transform.up);
-
-        //Calculate the cross product between the point to look and the movement input so we can 
-        //properly define the corresponding animation based on the direction the player is looking
-        //Vector3 crossProduct = Vector3.Cross(moveInput, transform.forward);
-
-        float dot = Vector3.Dot(moveInput, transform.forward);
+        dotProduct = Vector3.Dot(moveInput, transform.forward);
 
         //Animation state machine
         if (moveInput == Vector3.zero)
@@ -230,16 +233,16 @@ public class Player_Controller : MonoBehaviour
         if (moveInput.x != 0 || moveInput.z != 0)
         {
             //Run forward
-            if (dot > 1 - rotateThreshold && dot < 1 + rotateThreshold)
+            if (dotProduct > 1 - rotateThreshold && dotProduct < 1 + rotateThreshold)
                 animator.SetInteger("Run", 1);
             //Run backwards
-            if (dot > -1 - rotateThreshold && dot < -1 + rotateThreshold)
+            if (dotProduct > -1 - rotateThreshold && dotProduct < -1 + rotateThreshold)
                 animator.SetInteger("Run", 2);
             //Run right
-            if (dot > 0 - rotateThreshold && dot < 0 + rotateThreshold)
+            if (dotProduct > 0 - rotateThreshold && dotProduct < 0 + rotateThreshold)
                 animator.SetInteger("Run", 3);
             //Run left
-            if (dot > 0 - rotateThreshold && dot < 0 + rotateThreshold && moveInput.x > 0)
+            if (dotProduct > 0 - rotateThreshold && dotProduct < 0 + rotateThreshold && moveInput.x > 0)
                 animator.SetInteger("Run", 4);
         }
 

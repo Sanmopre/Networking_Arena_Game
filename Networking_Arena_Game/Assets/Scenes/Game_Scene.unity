@@ -2802,13 +2802,14 @@ MonoBehaviour:
   dashForce: 80
   dashCounter: 0
   firstDash: 0
+  dashFx: {fileID: 7888857835762348652, guid: 84dab4a8cf751fc4181b5f09a6186c21, type: 3}
   canonPosition: {fileID: 1152376978}
   bulletPrefab: {fileID: 4832174139182581250, guid: 64b43f0ba5f58d243868804417ccf965, type: 3}
   bulletForce: 170
   firerate: 0.05
   deviationRange: 0.03
-  shotgunFire: {fileID: 2189746706254249016, guid: e9ce91d6a00b370489afe4926d55fe56, type: 3}
-  fireDuration: 0.1
+  shotgunFire: {fileID: 7025019999686932498, guid: 18a2e96bced3cad49b74e8a1f79b4183, type: 3}
+  fireDuration: 0.2
   shotgunfirerate: 1
   crosshairPrefab: {fileID: 2525643583917749287, guid: 262bb0f5fcffe2a4cb0969066f8faabd, type: 3}
   explotionCollider: {fileID: 5816772431622093588, guid: 85e22b033ce92e846a787d787bf3d547, type: 3}
