@@ -514,10 +514,10 @@ public class UDP : MonoBehaviour
 
     // --- Shady stuffy ---
 
-    bool jitter = false;
+    bool jitter = true;
     bool packetLoss = false;
-    int minJitt = 0;
-    int maxJitt = 50;
+    int minJitt = 10;
+    int maxJitt = 70;
     int lossThreshold = 50;
 
     static readonly object myLock = new object();

@@ -15,7 +15,7 @@ public class Client : MonoBehaviour
     bool toRegister;
     string username;
     string password;
-
+    
     int notAcknowleged;
 
     enum State
@@ -45,16 +45,21 @@ public class Client : MonoBehaviour
 
     // --- Game ---
     [HideInInspector]
-    public Rigidbody player = null;
-    [HideInInspector]
-    public Rigidbody enemy = null;
+    public Player_Controller player = null;
+
+    NetworkStream sendStream = new NetworkStream();
     float lastDataSent = 0.0f;
     int sendID = 0;
     int lastRecvID = 0;
     int lastNetID = 0;
     int playerAmount = 2;
-    int updatesInASecond = 0;
-    float forTheSecond = 0;
+
+    public void RequestBullet(Vector3 position, Vector3 velocity)
+    {
+        lastNetID += playerAmount;
+        sendStream.AddBulletFunction(lastNetID, true, position, velocity);
+        Debug.Log("Requested Bullet");
+    }
     // --- !Game ---
 
     // --- NetworkObjects ---
@@ -245,7 +250,7 @@ public class Client : MonoBehaviour
                                 OutputStream oStream = new OutputStream(received);
 
                                 playerAmount = oStream.GetInt();
-                                int playerNetID = oStream.GetInt();
+                                lastNetID = oStream.GetInt();
                                 Vector3 playerPosition = oStream.GetVector3();
                                 int enemyNetID = oStream.GetInt();
                                 Vector3 enemyPosition = oStream.GetVector3();
@@ -253,7 +258,9 @@ public class Client : MonoBehaviour
                                 GameObject go = GameObject.Find("Player");
                                 if (go != null)
                                 {
-                                    NetObject no = new NetObject(playerNetID, go, go.GetComponent<Rigidbody>(), true);
+                                    player = go.GetComponent<Player_Controller>();
+
+                                    NetObject no = new NetObject(lastNetID, go, go.GetComponent<Rigidbody>(), true);
                                     no.rb.position = playerPosition;
                                     netObjects.Add(no);
                                     Debug.Log("Added player");
@@ -279,24 +286,17 @@ public class Client : MonoBehaviour
             case State.IN_GAME:
                 if (Time.realtimeSinceStartup >= lastDataSent + UDP.SEND_RATE)
                 {
-                    updatesInASecond++;
-                    NetworkStream stream = new NetworkStream();
-                    stream.AddIdData(sendID);
+                    sendStream.AddIdData(sendID);
                     ++sendID;
-                    Debug.Log(toServer.GetRoundTripTime());
+
                     foreach (NetObject netObj in netObjects)
                         if (netObj.owned)
-                            stream.AddObject(netObj.netID, netObj.rb.position + netObj.rb.velocity * toServer.GetRoundTripTime(), netObj.rb.velocity);
+                            sendStream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity);
 
-                    toServer.Send(stream.GetBuffer());
+                    toServer.Send(sendStream.GetBuffer());
+                    sendStream = new NetworkStream();
 
                     lastDataSent = Time.realtimeSinceStartup;
-                }
-                if (Time.realtimeSinceStartup >= forTheSecond + 1.0f)
-                {
-                    Debug.Log("Sent Messages this second: " + updatesInASecond);
-                    updatesInASecond = 0;
-                    forTheSecond = Time.realtimeSinceStartup;
                 }
                 while (toServer.CanReceive())
                 {
@@ -317,14 +317,27 @@ public class Client : MonoBehaviour
                                 break;
                             for (int i = 0; i < data.functions.Count; ++i)
                             {
-
+                                switch (data.functions[i].functionType)
+                                {
+                                    case NetworkStream.Keyword.FNC_BULLET:
+                                        player.ShootBullet(data.functions[i].position, data.functions[i].velocity);
+                                        break;
+                                }
                             }
 
                             if (lastRecvID < data.id)
                             {
                                 for (int i = 0; i < data.objects.Count; ++i)
                                 {
-                                    NetObject netObj = FindNetObject(1); // data.objects[i].netId // CHANGE BACK
+                                    if (Globals.singlePlayerTesting && data.objects[i].netId == 0)
+                                    {
+                                        NetworkStream.Object o = data.objects[i];
+                                        o.netId = 1;
+                                        data.objects[i] = o;
+                                    }
+
+                                    NetObject netObj = FindNetObject(data.objects[i].netId);
+                                  
                                     if (netObj == null)
                                         continue;
                                     netObj.rb.position = data.objects[i].position;

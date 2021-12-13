@@ -7,6 +7,12 @@ using UnityEngine;
 
 public class NetworkStream
 {
+    ~NetworkStream()
+    {
+        idData.Dispose();
+        fncData.Dispose();
+        objData.Dispose();
+    }
     // --- Input --- 
     MemoryStream idData = new MemoryStream();
     MemoryStream fncData = new MemoryStream();

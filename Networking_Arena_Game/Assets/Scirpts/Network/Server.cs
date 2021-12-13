@@ -21,7 +21,8 @@ public class Server : MonoBehaviour
 
             GameObject newClient = new GameObject();
             newClient.name = name;
-            DontDestroyOnLoad(newClient); // DELETE
+            if (Globals.singlePlayerTesting)
+                DontDestroyOnLoad(newClient);
             socket = newClient.AddComponent<UDP>();
             socket.remoteAddress = remoteAddress;
 
@@ -63,7 +64,8 @@ public class Server : MonoBehaviour
 
         GameObject newClient = new GameObject();
         newClient.name = client.value.name;
-        DontDestroyOnLoad(newClient); // DELETE
+        if (Globals.singlePlayerTesting)
+            DontDestroyOnLoad(newClient);
 
         client.value.socket = newClient.AddComponent<UDP>();
         client.value.socket.remoteAddress = remoteAddress;
@@ -165,7 +167,8 @@ public class Server : MonoBehaviour
 
     void Start()
     {
-        DontDestroyOnLoad(gameObject); // DELETE
+        if (Globals.singlePlayerTesting)
+            DontDestroyOnLoad(gameObject);
         listener = gameObject.GetComponent<UDP>();
         listener.listenMode = true;
     }
@@ -278,80 +281,82 @@ public class Server : MonoBehaviour
                     case UDP.RecvType.MESSAGE:
                         if (Encoding.UTF8.GetString(received) == "quickmatch")
                         {
-                            //Ref<Lobby> lobby = null;
-                            //for (int i = 0; i < lobbies.Count; ++i)
-                            //{
-                            //    lobby = lobbies[i];
-                            //    if (LobbyAddPlayer(lobby, client))
-                            //    {
-                            //        StartCoroutine(StartMatch(lobby.value.player1.value.socket, lobby.value.player2.value.socket));
-                            //        break;
-                            //    }
-                            //    lobby = null;
-                            //}
-                            //if (lobby == null)
-                            //{
-                            //    int newID = 1;
-                            //    if (lobbies.Count != 0)
-                            //        newID = lobbies[lobbies.Count - 1].value.id + 1;
-                            //
-                            //    lobbies.Add(new Ref<Lobby> { value = new Lobby(newID) });
-                            //
-                            //    if (!LobbyAddPlayer(lobbies[lobbies.Count - 1], client))
-                            //    {
-                            //        client.value.socket.Send("matchmaking error");
-                            //        lobbies.RemoveAt(lobbies.Count - 1);
-                            //    }
-                            //}
-                            client.value.state = Client.State.IN_GAME;
-                            client.value.socket.Send("match found");
+                            if (!Globals.singlePlayerTesting)
+                            {
+                                Ref<Lobby> lobby = null;
+                                for (int i = 0; i < lobbies.Count; ++i)
+                                {
+                                    lobby = lobbies[i];
+                                    if (LobbyAddPlayer(lobby, client))
+                                    {
+                                        StartCoroutine(StartMatch(lobby.value.player1.value.socket, lobby.value.player2.value.socket));
+                                        break;
+                                    }
+                                    lobby = null;
+                                }
+                                if (lobby == null)
+                                {
+                                    int newID = 1;
+                                    if (lobbies.Count != 0)
+                                        newID = lobbies[lobbies.Count - 1].value.id + 1;
+                                
+                                    lobbies.Add(new Ref<Lobby> { value = new Lobby(newID) });
+                                
+                                    if (!LobbyAddPlayer(lobbies[lobbies.Count - 1], client))
+                                    {
+                                        client.value.socket.Send("matchmaking error");
+                                        lobbies.RemoveAt(lobbies.Count - 1);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                client.value.state = Client.State.IN_GAME;
+                                client.value.socket.Send("match found");
 
-                            InputStream toPlayer1 = new InputStream();
-                            toPlayer1.AddInt(2);
-                            toPlayer1.AddInt(0);
-                            toPlayer1.AddVector3(new Vector3(-10.0f, 0.5f, 0));
-                            toPlayer1.AddInt(1);
-                            toPlayer1.AddVector3(new Vector3(10.0f, 0.5f, 0));
+                                InputStream toPlayer1 = new InputStream();
+                                toPlayer1.AddInt(2);
+                                toPlayer1.AddInt(0);
+                                toPlayer1.AddVector3(new Vector3(-10.0f, 0.5f, 0));
+                                toPlayer1.AddInt(1);
+                                toPlayer1.AddVector3(new Vector3(10.0f, 0.5f, 0));
 
-                            Debug.Log("Server sent match data");
-                            client.value.socket.Send(toPlayer1.GetBuffer());
+                                Debug.Log("Server sent match data");
+                                client.value.socket.Send(toPlayer1.GetBuffer());
+                            }
                         }
                         else
                         {
-                            //if (client.value.state == Client.State.IN_GAME && client.value.lobby != null)
-                            //{
-                            //    Ref<Client> resendTo = client.value.lobby.value.player1;
-                            //    if (client == client.value.lobby.value.player1)
-                            //        resendTo = client.value.lobby.value.player2;
-                            //
-                            //    NetworkStream.Data data = NetworkStream.Deserialize(received);
-                            //    if (data != null)
-                            //    {
-                            //        if (data.functions.Count > 0)
-                            //        {
-                            //            NetworkStream stream = new NetworkStream();
-                            //            for (int f = 0; f < data.functions.Count; ++f)
-                            //            {
-                            //                switch (data.functions[f].functionType)
-                            //                {
-                            //                    case NetworkStream.Keyword.FNC_BULLET:
-                            //                        break;
-                            //                    case NetworkStream.Keyword.FNC_HIT:
-                            //                        break;
-                            //                }
-                            //            }
-                            //        }
-                            //        if (data.objects.Count > 0)
-                            //        {
-                            //            for (int o = 0; o < data.objects.Count; ++o)
-                            //            {
-                            //                Debug.Log(client.value.name + " sent object " + data.objects[o].netId + " at position " + data.objects[o].position + " to " + resendTo.value.name);
-                            //            }
-                            //        }
-                            //    }
-                            //    resendTo.value.socket.Send(received);
-                            //}
-                            client.value.socket.Send(received);
+                            if (client.value.state == Client.State.IN_GAME && (client.value.lobby != null || Globals.singlePlayerTesting))
+                            {
+                                Ref<Client> resendTo = client.value.lobby.value.player1;
+                                if (!Globals.singlePlayerTesting)
+                                {
+                                    if (client == client.value.lobby.value.player1)
+                                        resendTo = client.value.lobby.value.player2;
+                                }
+                                
+                                NetworkStream.Data data = NetworkStream.Deserialize(received);
+                                if (data != null && data.functions.Count > 0)
+                                {
+                                    NetworkStream stream = new NetworkStream();
+                                    for (int f = 0; f < data.functions.Count; ++f)
+                                    {
+                                        switch (data.functions[f].functionType)
+                                        {
+                                            case NetworkStream.Keyword.FNC_BULLET:
+                                                Debug.Log(client.value.name + "'s bullet request accepted");
+                                                stream.AddBulletFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
+                                                break;
+                                            case NetworkStream.Keyword.FNC_HIT:
+                                                break;
+                                        }
+                                    }
+                                    client.value.socket.Send(stream.GetBuffer());
+                                }
+
+                                resendTo.value.socket.Send(received);
+                            }
                         }
                         break;
                 }

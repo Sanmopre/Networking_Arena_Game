@@ -67,6 +67,10 @@ public class Player_Controller : MonoBehaviour
     private float dotProduct;
     //float lookAndMoveAngle;
 
+    // --- Networking ---
+    Client client = null;
+    // --- !Networking ---
+
     public Vector3 cameraPositionForCanvas;
     void Start()
     {
@@ -74,7 +78,8 @@ public class Player_Controller : MonoBehaviour
         animator = GetComponent<Animator>();
         grenadeTimer = grenadeCooldown;
         enemyPlayer = GameObject.Find("Enemy");
-        
+
+        client = GameObject.Find("Client").GetComponent<Client>();
     }
 
 
@@ -302,14 +307,20 @@ public class Player_Controller : MonoBehaviour
     {
         if (firerateCount > firerate)
         {
-            Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
-            GameObject bullet = Instantiate(bulletPrefab, canonPosition.position, Quaternion.Euler(canonPosition.forward + offset));
-
-            Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
             Vector3 randomDeviation = new Vector3(Random.Range(deviationRange, -deviationRange), 0, Random.Range(deviationRange, -deviationRange));
-            bulletRB.AddForce((canonPosition.forward + randomDeviation) * bulletForce, ForceMode.Impulse);
+            client.RequestBullet(canonPosition.position, canonPosition.forward + randomDeviation);
+
             firerateCount = 0;
         }
+    }
+
+    public void ShootBullet(Vector3 position, Vector3 direction)
+    {
+        Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
+        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
+
+        Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
+        bulletRB.AddForce(direction * bulletForce, ForceMode.Impulse);
     }
 
     void ShoutgunAttack() 
