@@ -1,4 +1,4 @@
 ﻿public class Globals
 {
-    public static bool singlePlayerTesting = true;
+    public static bool singlePlayerTesting = false;
 }

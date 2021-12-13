@@ -97,6 +97,26 @@ public class Server : MonoBehaviour
     List<Ref<Client>> clients = new List<Ref<Client>>();
 
     // --- Lobby ---
+    struct HitRequest
+    {
+        public HitRequest(int netId, Ref<Client> sender, int damage)
+        {
+            this.netId = netId;
+            this.damage = damage;
+            this.sender = sender;
+
+            send = false;
+            hitTime = Time.realtimeSinceStartup;
+            waitTime = 0.05f;
+        }
+        public int netId;
+        public bool send;
+        public int damage;
+        public Ref<Client> sender;
+
+        public float hitTime;
+        public float waitTime;
+    }
     struct Lobby
     {
         public Lobby(int id)
@@ -106,6 +126,8 @@ public class Server : MonoBehaviour
 
             player1 = null;
             player2 = null;
+
+            hitRequests = new List<HitRequest>();
         }
 
         public int id;
@@ -113,6 +135,8 @@ public class Server : MonoBehaviour
 
         public Ref<Client> player1;
         public Ref<Client> player2;
+
+        public List<HitRequest> hitRequests;
     }
 
     bool LobbyAddPlayer(Ref<Lobby> lobby, Ref<Client> client)
@@ -173,13 +197,8 @@ public class Server : MonoBehaviour
         listener.listenMode = true;
     }
 
-    bool startGame = false;
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Q))
-        {
-            startGame = true;
-        }
         if (Input.GetKeyDown(KeyCode.Return))
         {
             Debug.Log("Clients:");
@@ -329,26 +348,88 @@ public class Server : MonoBehaviour
                         {
                             if (client.value.state == Client.State.IN_GAME && (client.value.lobby != null || Globals.singlePlayerTesting))
                             {
-                                Ref<Client> resendTo = client.value.lobby.value.player1;
+                                Ref<Lobby> lobby = client.value.lobby;
+
+                                Ref<Client> resendTo;
                                 if (!Globals.singlePlayerTesting)
                                 {
-                                    if (client == client.value.lobby.value.player1)
-                                        resendTo = client.value.lobby.value.player2;
+                                    resendTo = lobby.value.player1;
+                                    if (client == lobby.value.player1)
+                                        resendTo = lobby.value.player2;
                                 }
-                                
+                                else
+                                {
+                                    resendTo = client;
+                                }
+
                                 NetworkStream.Data data = NetworkStream.Deserialize(received);
-                                if (data != null && data.functions.Count > 0)
+
+                                if (!Globals.singlePlayerTesting)
+                                    for (int h = 0; h < lobby.value.hitRequests.Count; ++h) // search the hit requests
+                                    {
+                                        HitRequest hitRequest = lobby.value.hitRequests[h];
+                                        if (hitRequest.hitTime != -1 && Time.realtimeSinceStartup >= hitRequest.hitTime + hitRequest.waitTime) // find timed out hit request
+                                        {
+                                            Ref<Client> otherClient = lobby.value.player1;
+                                            if (hitRequest.sender == lobby.value.player1) 
+                                                otherClient = lobby.value.player2;
+                                            float senderRTT = hitRequest.sender.value.socket.GetRoundTripTime(); // compare round trip time of the clients
+                                            float otherRTT = otherClient.value.socket.GetRoundTripTime();
+
+                                            if (senderRTT < otherRTT) // if the sender has better connection...
+                                            {
+                                                NetworkStream stream = new NetworkStream();
+                                                stream.AddIdData(0);
+                                                stream.AddHitFunction(hitRequest.netId, false, lobby.value.hitRequests[h].damage);
+                                                byte[] buffer = stream.GetBuffer();
+
+                                                lobby.value.player1.value.socket.Send(buffer); // send a hit function to both players
+                                                lobby.value.player2.value.socket.Send(buffer);
+                                            }
+
+                                            lobby.value.hitRequests.RemoveAt(h); // remove the request
+                                            --h;
+                                        }
+                                    }
+
+                                if (data.functions.Count > 0)
                                 {
                                     NetworkStream stream = new NetworkStream();
+                                    stream.AddIdData(0);
                                     for (int f = 0; f < data.functions.Count; ++f)
                                     {
                                         switch (data.functions[f].functionType)
                                         {
                                             case NetworkStream.Keyword.FNC_BULLET:
-                                                Debug.Log(client.value.name + "'s bullet request accepted");
                                                 stream.AddBulletFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
                                                 break;
-                                            case NetworkStream.Keyword.FNC_HIT:
+                                            case NetworkStream.Keyword.FNC_HIT: // when receiving a hit from a client
+                                                if (Globals.singlePlayerTesting)
+                                                {
+                                                    stream.AddHitFunction(data.functions[f].netId, false, data.functions[f].damage);
+                                                    break;
+                                                }
+                                                List<HitRequest> hitRequests = lobby.value.hitRequests;
+                                                bool found = false;
+                                                for (int h = 0; h < hitRequests.Count; ++h) // search the hit requests
+                                                {
+                                                    if (hitRequests[h].netId == data.functions[f].netId && hitRequests[h].sender != client) // if a hit request to the same target was issued by the other player
+                                                    {
+                                                        stream.AddHitFunction(hitRequests[h].netId, false, hitRequests[h].damage); // send a hit request to the client and leave the function in data
+                                                        found = true;                                                              // so that it is also sent to the other player later
+
+                                                        hitRequests.RemoveAt(h);
+                                                        break;
+                                                    }
+                                                }
+                                                if (!found) // if no hit request is found
+                                                {
+                                                    lobby.value.hitRequests.Add(new HitRequest(data.functions[f].netId, client, data.functions[f].damage)); // create a hit request
+
+                                                    data.functions.RemoveAt(f); // remove the function from the deserialized data
+                                                    --f;
+                                                    received = new NetworkStream(data).GetBuffer(); // and update the byte array we resend to the other player
+                                                }
                                                 break;
                                         }
                                     }

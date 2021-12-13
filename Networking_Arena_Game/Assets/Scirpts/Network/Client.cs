@@ -44,8 +44,8 @@ public class Client : MonoBehaviour
     // --- !UI ---
 
     // --- Game ---
-    [HideInInspector]
-    public Player_Controller player = null;
+    Player_Controller player = null;
+    Game_Manager game = null;
 
     NetworkStream sendStream = new NetworkStream();
     float lastDataSent = 0.0f;
@@ -53,12 +53,18 @@ public class Client : MonoBehaviour
     int lastRecvID = 0;
     int lastNetID = 0;
     int playerAmount = 2;
+    int playerID = 0;
 
     public void RequestBullet(Vector3 position, Vector3 velocity)
     {
         lastNetID += playerAmount;
         sendStream.AddBulletFunction(lastNetID, true, position, velocity);
-        Debug.Log("Requested Bullet");
+    }
+    public void RequestHit(string name, int damage)
+    {
+        Debug.Log("Added hit request");
+        NetObject netObj = FindNetObjectByName(name);
+        sendStream.AddHitFunction(netObj.netID, netObj.owned, damage);
     }
     // --- !Game ---
 
@@ -83,6 +89,13 @@ public class Client : MonoBehaviour
     {
         foreach (NetObject netObj in netObjects)
             if (netObj.netID == netID)
+                return netObj;
+        return null;
+    }
+    NetObject FindNetObjectByName(string name)
+    {
+        foreach (NetObject netObj in netObjects)
+            if (netObj.go.name == name)
                 return netObj;
         return null;
     }
@@ -250,7 +263,7 @@ public class Client : MonoBehaviour
                                 OutputStream oStream = new OutputStream(received);
 
                                 playerAmount = oStream.GetInt();
-                                lastNetID = oStream.GetInt();
+                                playerID = lastNetID = oStream.GetInt();
                                 Vector3 playerPosition = oStream.GetVector3();
                                 int enemyNetID = oStream.GetInt();
                                 Vector3 enemyPosition = oStream.GetVector3();
@@ -272,6 +285,11 @@ public class Client : MonoBehaviour
                                     no.rb.position = enemyPosition;
                                     netObjects.Add(no);
                                     Debug.Log("Added enemy");
+                                }
+                                go = GameObject.Find("GameManager");
+                                if (go != null)
+                                {
+                                    game = go.GetComponent<Game_Manager>();
                                 }
 
                                 state = State.IN_GAME;
@@ -322,6 +340,14 @@ public class Client : MonoBehaviour
                                     case NetworkStream.Keyword.FNC_BULLET:
                                         player.ShootBullet(data.functions[i].position, data.functions[i].velocity);
                                         break;
+                                    case NetworkStream.Keyword.FNC_HIT:
+                                        Debug.Log("Added hit confirmation");
+                                        NetObject netObj = FindNetObject(data.functions[i].netId);
+                                        int pl = 1;
+                                        if (netObj.netID != playerID)
+                                            pl = 2;
+                                        game.TakeDamage(data.functions[i].damage, pl);
+                                        break;
                                 }
                             }
 
@@ -329,19 +355,19 @@ public class Client : MonoBehaviour
                             {
                                 for (int i = 0; i < data.objects.Count; ++i)
                                 {
-                                    if (Globals.singlePlayerTesting && data.objects[i].netId == 0)
-                                    {
-                                        NetworkStream.Object o = data.objects[i];
-                                        o.netId = 1;
-                                        data.objects[i] = o;
-                                    }
-
-                                    NetObject netObj = FindNetObject(data.objects[i].netId);
-                                  
-                                    if (netObj == null)
-                                        continue;
-                                    netObj.rb.position = data.objects[i].position;
-                                    netObj.rb.velocity = data.objects[i].velocity;
+                                   if (Globals.singlePlayerTesting && data.objects[i].netId == 0)
+                                   {
+                                       NetworkStream.Object o = data.objects[i];
+                                       o.netId = 1;
+                                       data.objects[i] = o;
+                                   }
+                                   
+                                   NetObject netObj = FindNetObject(data.objects[i].netId);
+                                   
+                                   if (netObj == null)
+                                       continue;
+                                   netObj.rb.position = data.objects[i].position;
+                                   netObj.rb.velocity = data.objects[i].velocity;
                                 }
                                 lastRecvID = data.id;
                             }

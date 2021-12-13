@@ -2799,7 +2799,7 @@ MonoBehaviour:
   canonPosition: {fileID: 1152376978}
   bulletPrefab: {fileID: 4832174139182581250, guid: 64b43f0ba5f58d243868804417ccf965, type: 3}
   bulletForce: 170
-  firerate: 1
+  firerate: 0.2
   deviationRange: 0.03
   shotgunFire: {fileID: 7025019999686932498, guid: 18a2e96bced3cad49b74e8a1f79b4183, type: 3}
   fireDuration: 0.2
@@ -3923,7 +3923,7 @@ CapsuleCollider:
   m_IsTrigger: 1
   m_Enabled: 1
   m_Radius: 0.5
-  m_Height: 2
+  m_Height: 10
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &2065730614

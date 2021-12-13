@@ -7,11 +7,14 @@ public class BulletBehaviour : MonoBehaviour
     public GameObject   hitParticle;
     private Game_Manager game;
     public float        lifetime = 1.0f;
+    Client client = null;
 
     private void Start()
     {
         Destroy(gameObject, lifetime);
         game = GameObject.Find("GameManager").GetComponent<Game_Manager>();
+
+        client = GameObject.Find("Client").GetComponent<Client>();
 
     }
 
@@ -28,21 +31,12 @@ public class BulletBehaviour : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.name == "Enemy")
+        if (other.gameObject.name == "Enemy" || other.gameObject.name == "Player")
         {
-            game.TakeDamage(game.bulletDamage, 2);
+            client.RequestHit(other.gameObject.name, game.bulletDamage);
             GameObject hitFx = Instantiate(hitParticle, transform.position, Quaternion.identity);
             Destroy(hitFx, 3f);
             Destroy(gameObject);
-        }
-
-        if (other.gameObject.name == "Player")
-        {
-            game.TakeDamage(game.bulletDamage, 1);
-            GameObject hitFx = Instantiate(hitParticle, transform.position, Quaternion.identity);
-            Destroy(hitFx, 3f);
-            Destroy(gameObject);
-
         }
     }
 }

@@ -7,6 +7,20 @@ using UnityEngine;
 
 public class NetworkStream
 {
+    public NetworkStream()
+    {
+
+    }
+    public NetworkStream(Data data)
+    {
+        AddIdData(data.id);
+
+        for (int i = 0; i < data.functions.Count; ++i)
+            AddFunction(data.functions[i].functionType, data.functions[i].netId, data.functions[i].owned, data.functions[i].position, data.functions[i].velocity, data.functions[i].damage);
+        for (int i = 0; i < data.objects.Count; ++i)
+            AddObject(data.objects[i].netId, data.objects[i].position, data.objects[i].velocity);
+    }
+
     ~NetworkStream()
     {
         idData.Dispose();
@@ -43,6 +57,21 @@ public class NetworkStream
         fncData.Write(BitConverter.GetBytes((int)type), 0, INT_SIZE);
         fncData.Write(BitConverter.GetBytes(netId), 0, INT_SIZE);
         fncData.Write(BitConverter.GetBytes(owned), 0, BOOL_SIZE);
+    }
+
+    void AddFunction(Keyword type, int netId, bool owned, Vector3 position, Vector3 velocity, int damage)
+    {
+        AddFunctionHeader(Keyword.FNC_BULLET, netId, owned);
+
+        fncData.Write(BitConverter.GetBytes((double)position.x), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)position.y), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)position.z), 0, DOUBLE_SIZE);
+
+        fncData.Write(BitConverter.GetBytes((double)velocity.x), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)velocity.y), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)velocity.z), 0, DOUBLE_SIZE);
+
+        fncData.Write(BitConverter.GetBytes(damage), 0, INT_SIZE);
     }
 
     public void AddBulletFunction(int netId, bool owned, Vector3 position, Vector3 velocity)
