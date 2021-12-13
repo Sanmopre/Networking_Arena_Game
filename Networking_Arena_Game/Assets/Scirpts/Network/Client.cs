@@ -355,19 +355,19 @@ public class Client : MonoBehaviour
                             {
                                 for (int i = 0; i < data.objects.Count; ++i)
                                 {
-                                   if (Globals.singlePlayerTesting && data.objects[i].netId == 0)
-                                   {
-                                       NetworkStream.Object o = data.objects[i];
-                                       o.netId = 1;
-                                       data.objects[i] = o;
-                                   }
-                                   
-                                   NetObject netObj = FindNetObject(data.objects[i].netId);
-                                   
-                                   if (netObj == null)
-                                       continue;
-                                   netObj.rb.position = data.objects[i].position;
-                                   netObj.rb.velocity = data.objects[i].velocity;
+                                //   if (Globals.singlePlayerTesting && data.objects[i].netId == 0)
+                                //   {
+                                //       NetworkStream.Object o = data.objects[i];
+                                //       o.netId = 1;
+                                //       data.objects[i] = o;
+                                //   }
+                                //   
+                                //   NetObject netObj = FindNetObject(data.objects[i].netId);
+                                //   
+                                //   if (netObj == null)
+                                //       continue;
+                                //   netObj.rb.position = data.objects[i].position;
+                                //   netObj.rb.velocity = data.objects[i].velocity;
                                 }
                                 lastRecvID = data.id;
                             }

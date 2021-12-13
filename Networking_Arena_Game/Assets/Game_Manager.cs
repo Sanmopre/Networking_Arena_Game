@@ -24,8 +24,11 @@ public class Game_Manager : MonoBehaviour
 
     //Damage stats
     public int bulletDamage = 3;
-    public int missileDamage = 20;
-    public int shotgunDamage = 15;
+    public int missileDamage = 35;
+    public int shotgunDamage = 20;
+
+    private bool playerWon = false;
+    private bool enemyWon = false;
 
     //Respawn points
     public GameObject respawnPositionEnemy;

@@ -401,7 +401,7 @@ public class Server : MonoBehaviour
                                         switch (data.functions[f].functionType)
                                         {
                                             case NetworkStream.Keyword.FNC_BULLET:
-                                                stream.AddBulletFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
+                                                //stream.AddBulletFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
                                                 break;
                                             case NetworkStream.Keyword.FNC_HIT: // when receiving a hit from a client
                                                 if (Globals.singlePlayerTesting)
