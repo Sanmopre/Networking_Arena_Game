@@ -4182,7 +4182,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 501857343398651703, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.13
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 501857343398651703, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4215,6 +4215,14 @@ PrefabInstance:
     - target: {fileID: 501857343398651703, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 989987302396853640, guid: d74133ccf45c99344938f14651e34565, type: 3}
+      propertyPath: m_Center.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 989987302396853640, guid: d74133ccf45c99344938f14651e34565, type: 3}
+      propertyPath: m_Size.y
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 989987302396853642, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: mainCamera
