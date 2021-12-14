@@ -4,24 +4,15 @@ using UnityEngine;
 
 public class GrenadeBehaviour : MonoBehaviour
 {
-
     public GameObject explosionParticle;
-    public float explosionRadius;
 
-    private void OnCollisionEnter(Collision collision)
+    private void Update()
     {
-        ApplyDamage();
-        GameObject hitFx = Instantiate(explosionParticle, transform.position, Quaternion.identity);
-        Destroy(hitFx, 3f);
-        Destroy(gameObject);
-    }
-
-    void ApplyDamage()
-    {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
-        foreach (var hitCollider in hitColliders)
+        if (transform.position.y <= 0.5f)
         {
-            Debug.Log(hitCollider.gameObject.name);
+            GameObject hitFx = Instantiate(explosionParticle, new Vector3(transform.position.x, 1.0f, transform.position.z), Quaternion.identity);
+            Destroy(hitFx, 1f);
+            Destroy(gameObject);
         }
     }
 }

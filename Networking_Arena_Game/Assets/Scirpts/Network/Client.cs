@@ -345,6 +345,9 @@ public class Client : MonoBehaviour
                                     case NetworkStream.Keyword.FNC_BULLET:
                                         player.InstantiateBullet(data.functions[i].position, data.functions[i].velocity, data.functions[i].netId);
                                         break;
+                                    case NetworkStream.Keyword.FNC_MISSILE:
+                                        player.InstantiateMissile(data.functions[i].position, data.functions[i].time);
+                                        break;
                                     case NetworkStream.Keyword.FNC_HIT:
                                         NetObject netObj = FindNetObject(data.functions[i].netId);
                                         int pl = 1;

@@ -7,6 +7,9 @@ public class Explotion_Script : MonoBehaviour
     private Game_Manager game;
     private GameObject gameObj;
     bool doDamage = false;
+
+
+
     private void Start()
     {
         game = GameObject.Find("GameManager").GetComponent<Game_Manager>();

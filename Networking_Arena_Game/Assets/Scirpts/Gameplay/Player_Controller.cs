@@ -43,16 +43,8 @@ public class Player_Controller : MonoBehaviour
     bool shootingShotgun = false;
 
     [Header("Missile Attack")]
-    public GameObject crosshairPrefab;
-    public GameObject explotionCollider;
     public GameObject missilePrefab;
-    public float missileSpawnHeight = 40f;
-    public float missileVelocity = -35f;
-    public float expltionTimer = 2.0f;
-    float explotionCounter = 0f;
-    public float explotionDuration = 1.0f;
-    bool missileComming = false;
-    Vector3 explotionPosition;    
+    public float explosionTime = 1.0f;
     public float grenadeCooldown;
     public float grenadeTimer;
 
@@ -79,7 +71,8 @@ public class Player_Controller : MonoBehaviour
         grenadeTimer = grenadeCooldown;
         enemyPlayer = GameObject.Find("Enemy");
 
-        client = GameObject.Find("Client").GetComponent<Client>();
+        if (!Globals.singlePlayer)
+            client = GameObject.Find("Client").GetComponent<Client>();
     }
 
 
@@ -108,8 +101,6 @@ public class Player_Controller : MonoBehaviour
 
         //SMOOOOTH CAMERA FOLLOW
         CameraFollow();
-
-        ManageExplotionFromMissile();
     }
 
     private void ShootingInput() 
@@ -272,31 +263,16 @@ public class Player_Controller : MonoBehaviour
         return new Vector3(pointToLook.x, transform.position.y, pointToLook.z);
     }
 
-    void ManageExplotionFromMissile() 
-    {
-        if(missileComming && explotionCounter > expltionTimer)
-        {
-            GameObject explotion = Instantiate(explotionCollider, explotionPosition, Quaternion.identity);
-            Destroy(explotion, explotionDuration);
-            missileComming = false;
-        }
-        else 
-        {
-            explotionCounter += Time.deltaTime;
-        }
-    }
     void ShootMissile()
     {
-        Instantiate(crosshairPrefab, new Vector3(GetPlayerPointToLook().x, 1 , GetPlayerPointToLook().z), Quaternion.identity);
-        GameObject grenade = Instantiate(missilePrefab, new Vector3(GetPlayerPointToLook().x, missileSpawnHeight, GetPlayerPointToLook().z), Quaternion.identity);
-        grenade.GetComponent<Rigidbody>().velocity = new Vector3(0, missileVelocity, 0);
-        missileComming = true;
-        explotionCounter = 0;
-        explotionPosition = GetPlayerPointToLook();
-
+        if (!Globals.singlePlayer)
+            client.RequestMissile(new Vector3(GetPlayerPointToLook().x, 1, GetPlayerPointToLook().z), explosionTime);
+        else
+            InstantiateMissile(new Vector3(GetPlayerPointToLook().x, 1, GetPlayerPointToLook().z), explosionTime);
     }
-    public void InstantiateMissile(Vector3 position, float time, int shooterID)
+    public void InstantiateMissile(Vector3 position, float time)
     {
+        Instantiate(missilePrefab, position, Quaternion.identity).GetComponent<MissileAttack>().explosionTimer = time;
     }
 
     void CameraFollow() 
@@ -315,7 +291,7 @@ public class Player_Controller : MonoBehaviour
             if (!Globals.singlePlayer)
                 client.RequestBullet(canonPosition.position, canonPosition.forward + randomDeviation);
             else
-                InstantiateBullet(canonPosition.position, canonPosition.forward + randomDeviation, client.playerID);
+                InstantiateBullet(canonPosition.position, canonPosition.forward + randomDeviation, 0);
 
             firerateCount = 0;
         }
