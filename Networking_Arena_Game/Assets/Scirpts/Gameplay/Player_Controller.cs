@@ -295,6 +295,10 @@ public class Player_Controller : MonoBehaviour
         explotionPosition = GetPlayerPointToLook();
 
     }
+    public void InstantiateMissile(Vector3 position, float time, int shooterID)
+    {
+    }
+
     void CameraFollow() 
     {
         Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
@@ -308,16 +312,20 @@ public class Player_Controller : MonoBehaviour
         if (firerateCount > firerate)
         {
             Vector3 randomDeviation = new Vector3(Random.Range(deviationRange, -deviationRange), 0, Random.Range(deviationRange, -deviationRange));
-            client.RequestBullet(canonPosition.position, canonPosition.forward + randomDeviation);
+            if (!Globals.singlePlayer)
+                client.RequestBullet(canonPosition.position, canonPosition.forward + randomDeviation);
+            else
+                InstantiateBullet(canonPosition.position, canonPosition.forward + randomDeviation, client.playerID);
 
             firerateCount = 0;
         }
     }
 
-    public void ShootBullet(Vector3 position, Vector3 direction)
+    public void InstantiateBullet(Vector3 position, Vector3 direction, int shooterID)
     {
         Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
         GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
+        bullet.tag = shooterID.ToString();
 
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
         bulletRB.AddForce(direction * bulletForce, ForceMode.Impulse);

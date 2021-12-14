@@ -44,7 +44,8 @@ public class NetworkStream
         OBJECT = 0,
         FUNCTION = 1,
         FNC_BULLET = 2,
-        FNC_HIT = 3,
+        FNC_MISSILE = 3,
+        FNC_HIT = 4,
     }
 
     public void AddIdData(int id)
@@ -85,6 +86,19 @@ public class NetworkStream
         fncData.Write(BitConverter.GetBytes((double)velocity.x), 0, DOUBLE_SIZE);
         fncData.Write(BitConverter.GetBytes((double)velocity.y), 0, DOUBLE_SIZE);
         fncData.Write(BitConverter.GetBytes((double)velocity.z), 0, DOUBLE_SIZE);
+
+        ++fncCount;
+    }
+
+    public void AddMissileFunction(int netId, bool owned, Vector3 position, float time)
+    {
+        AddFunctionHeader(Keyword.FNC_MISSILE, netId, owned);
+
+        fncData.Write(BitConverter.GetBytes((double)position.x), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)position.y), 0, DOUBLE_SIZE);
+        fncData.Write(BitConverter.GetBytes((double)position.z), 0, DOUBLE_SIZE);
+
+        fncData.Write(BitConverter.GetBytes((double)time), 0, DOUBLE_SIZE);
 
         ++fncCount;
     }
@@ -153,7 +167,7 @@ public class NetworkStream
     // --- Output --- 
     public struct Function
     {
-        public Function(Keyword functionType, int netId, bool owned, Vector3 position, Vector3 velocity, int damage)
+        public Function(Keyword functionType, int netId, bool owned, Vector3 position, Vector3 velocity, float time, int damage)
         {
             this.functionType = functionType;
             this.netId = netId;
@@ -161,6 +175,8 @@ public class NetworkStream
 
             this.position = position;
             this.velocity = velocity;
+
+            this.time = time;
 
             this.damage = damage;
         }
@@ -172,6 +188,8 @@ public class NetworkStream
         // BULLET
         public Vector3 position;
         public Vector3 velocity;
+        // MISSILE
+        public float time;
         // HIT
         public int damage;
     }
@@ -226,15 +244,25 @@ public class NetworkStream
                 switch (functionType)
                 {
                     case Keyword.FNC_BULLET:
-                        Vector3 position = stream.GetVector3();
-                        Vector3 velocity = stream.GetVector3();
+                        {
+                            Vector3 position = stream.GetVector3();
+                            Vector3 velocity = stream.GetVector3();
 
-                        retData.functions.Add(new Function(functionType, netId, owned, position, velocity, 0));
+                            retData.functions.Add(new Function(functionType, netId, owned, position, velocity, 0, 0));
+                        }
+                        break;
+                    case Keyword.FNC_MISSILE:
+                        {
+                            Vector3 position = stream.GetVector3();
+                            float time = stream.GetFloat();
+
+                            retData.functions.Add(new Function(functionType, netId, owned, position, Vector3.zero, time, 0));
+                        }
                         break;
                     case Keyword.FNC_HIT:
                         int damage = stream.GetInt();
 
-                        retData.functions.Add(new Function(functionType, netId, owned, Vector3.zero, Vector3.zero, damage));
+                        retData.functions.Add(new Function(functionType, netId, owned, Vector3.zero, Vector3.zero, 0, damage));
                         break;
                 }
             }

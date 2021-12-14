@@ -21,7 +21,7 @@ public class Server : MonoBehaviour
 
             GameObject newClient = new GameObject();
             newClient.name = name;
-            if (Globals.singlePlayerTesting)
+            if (Globals.localTesting)
                 DontDestroyOnLoad(newClient);
             socket = newClient.AddComponent<UDP>();
             socket.remoteAddress = remoteAddress;
@@ -64,7 +64,7 @@ public class Server : MonoBehaviour
 
         GameObject newClient = new GameObject();
         newClient.name = client.value.name;
-        if (Globals.singlePlayerTesting)
+        if (Globals.localTesting)
             DontDestroyOnLoad(newClient);
 
         client.value.socket = newClient.AddComponent<UDP>();
@@ -191,7 +191,7 @@ public class Server : MonoBehaviour
 
     void Start()
     {
-        if (Globals.singlePlayerTesting)
+        if (Globals.localTesting)
             DontDestroyOnLoad(gameObject);
         listener = gameObject.GetComponent<UDP>();
         listener.listenMode = true;
@@ -300,7 +300,7 @@ public class Server : MonoBehaviour
                     case UDP.RecvType.MESSAGE:
                         if (Encoding.UTF8.GetString(received) == "quickmatch")
                         {
-                            if (!Globals.singlePlayerTesting)
+                            if (!Globals.localTesting)
                             {
                                 Ref<Lobby> lobby = null;
                                 for (int i = 0; i < lobbies.Count; ++i)
@@ -346,12 +346,12 @@ public class Server : MonoBehaviour
                         }
                         else
                         {
-                            if (client.value.state == Client.State.IN_GAME && (client.value.lobby != null || Globals.singlePlayerTesting))
+                            if (client.value.state == Client.State.IN_GAME && (client.value.lobby != null || Globals.localTesting))
                             {
                                 Ref<Lobby> lobby = client.value.lobby;
 
                                 Ref<Client> resendTo;
-                                if (!Globals.singlePlayerTesting)
+                                if (!Globals.localTesting)
                                 {
                                     resendTo = lobby.value.player1;
                                     if (client == lobby.value.player1)
@@ -364,7 +364,7 @@ public class Server : MonoBehaviour
 
                                 NetworkStream.Data data = NetworkStream.Deserialize(received);
 
-                                if (!Globals.singlePlayerTesting)
+                                if (!Globals.localTesting)
                                     for (int h = 0; h < lobby.value.hitRequests.Count; ++h) // search the hit requests
                                     {
                                         HitRequest hitRequest = lobby.value.hitRequests[h];
@@ -385,6 +385,7 @@ public class Server : MonoBehaviour
 
                                                 lobby.value.player1.value.socket.Send(buffer); // send a hit function to both players
                                                 lobby.value.player2.value.socket.Send(buffer);
+                                                Debug.Log("Hit Server Decition");
                                             }
 
                                             lobby.value.hitRequests.RemoveAt(h); // remove the request
@@ -401,10 +402,13 @@ public class Server : MonoBehaviour
                                         switch (data.functions[f].functionType)
                                         {
                                             case NetworkStream.Keyword.FNC_BULLET:
-                                                //stream.AddBulletFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
+                                                stream.AddBulletFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
+                                                break;
+                                            case NetworkStream.Keyword.FNC_MISSILE:
+                                                stream.AddMissileFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].time);
                                                 break;
                                             case NetworkStream.Keyword.FNC_HIT: // when receiving a hit from a client
-                                                if (Globals.singlePlayerTesting)
+                                                if (Globals.localTesting)
                                                 {
                                                     stream.AddHitFunction(data.functions[f].netId, false, data.functions[f].damage);
                                                     break;
@@ -417,7 +421,7 @@ public class Server : MonoBehaviour
                                                     {
                                                         stream.AddHitFunction(hitRequests[h].netId, false, hitRequests[h].damage); // send a hit request to the client and leave the function in data
                                                         found = true;                                                              // so that it is also sent to the other player later
-
+                                                        Debug.Log("Hit Clients Agreement");
                                                         hitRequests.RemoveAt(h);
                                                         break;
                                                     }

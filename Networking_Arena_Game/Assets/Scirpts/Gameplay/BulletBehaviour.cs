@@ -22,7 +22,7 @@ public class BulletBehaviour : MonoBehaviour
     {
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnCollisionEnter(Collision other)
     {
         GameObject hitFx = Instantiate(hitParticle, transform.position, Quaternion.identity);
         Destroy(hitFx, 3f);
@@ -31,7 +31,7 @@ public class BulletBehaviour : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.name == "Enemy" || other.gameObject.name == "Player")
+        if ((other.gameObject.name == "Enemy" || other.gameObject.name == "Player") && !gameObject.CompareTag(other.gameObject.tag))
         {
             client.RequestHit(other.gameObject.name, game.bulletDamage);
             GameObject hitFx = Instantiate(hitParticle, transform.position, Quaternion.identity);
