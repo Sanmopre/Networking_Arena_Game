@@ -10,7 +10,8 @@ public class Game_Menu_Manager : MonoBehaviour
     private Text timerText;
     private Game_Manager gameManager;
 
-    public GameObject UIPlayerLifePrefab;
+    public GameObject PlayerUIprefab;
+    public GameObject EnemyUIprefab;
 
     //dont understand how ui works :(
     public Vector3 canvasOffSet;   
@@ -94,13 +95,13 @@ public class Game_Menu_Manager : MonoBehaviour
 
         for (int i = 0; i < gameManager.Player.lives; i++) 
         {
-            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(UIPlayer1LiveCount.transform.position.x -  (i * distance_offset_x), UIPlayer1LiveCount.transform.position.y, UIPlayer1LiveCount.transform.position.z), Quaternion.identity);
+            var new_ui = Instantiate(PlayerUIprefab, new Vector3(UIPlayer1LiveCount.transform.position.x -  (i * distance_offset_x), UIPlayer1LiveCount.transform.position.y, UIPlayer1LiveCount.transform.position.z), Quaternion.identity);
             new_ui.transform.parent = UIPlayer1LiveCount.transform;
         }
 
         for (int i = 0; i < gameManager.Enemy.lives; i++)
         {
-            var new_ui = Instantiate(UIPlayerLifePrefab, new Vector3(UIPlayer2LiveCount.transform.position.x + (i * distance_offset_x), UIPlayer2LiveCount.transform.position.y, UIPlayer2LiveCount.transform.position.z), Quaternion.identity);
+            var new_ui = Instantiate(EnemyUIprefab, new Vector3(UIPlayer2LiveCount.transform.position.x + (i * distance_offset_x), UIPlayer2LiveCount.transform.position.y, UIPlayer2LiveCount.transform.position.z), Quaternion.identity);
             new_ui.transform.parent = UIPlayer2LiveCount.transform;
         }
     }
