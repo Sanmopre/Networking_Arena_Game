@@ -14,7 +14,8 @@ public class BulletBehaviour : MonoBehaviour
         Destroy(gameObject, lifetime);
         game = GameObject.Find("GameManager").GetComponent<Game_Manager>();
 
-        client = GameObject.Find("Client").GetComponent<Client>();
+        if(!Globals.singlePlayer)
+            client = GameObject.Find("Client").GetComponent<Client>();
 
     }
 
@@ -33,7 +34,8 @@ public class BulletBehaviour : MonoBehaviour
     {
         if ((other.gameObject.name == "Enemy" || other.gameObject.name == "Player") && !gameObject.CompareTag(other.gameObject.tag))
         {
-            client.RequestHit(other.gameObject.name, game.bulletDamage);
+            if(client != null)
+                client.RequestHit(other.gameObject.name, game.bulletDamage);
             GameObject hitFx = Instantiate(hitParticle, transform.position, Quaternion.identity);
             Destroy(hitFx, 3f);
             Destroy(gameObject);

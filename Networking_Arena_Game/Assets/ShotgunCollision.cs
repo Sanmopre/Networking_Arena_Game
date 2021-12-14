@@ -19,15 +19,12 @@ public class ShotgunCollision : MonoBehaviour
             doDamage = false;
             game.TakeDamage(game.shotgunDamage, 2);
         }
-        //Debug.Log("sdfsd");
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log("sdfsd");
         if (other.gameObject.name == "Enemy")
         {
-            Debug.Log("sdfsd");
             doDamage = true;
         }
 
