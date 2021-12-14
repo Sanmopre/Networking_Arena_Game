@@ -2631,6 +2631,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1306945046}
   m_CullTransparentMesh: 1
+--- !u!114 &1341621660 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 989987302396853642, guid: d74133ccf45c99344938f14651e34565, type: 3}
+  m_PrefabInstance: {fileID: 5702143915046086286}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06e438c1242f2624894f579c68a0a726, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1414323891
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2762,7 +2773,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -927199367670048503, guid: 320b1c2af77554f99a1658df4a6d3d5c, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -5716681864270162303, guid: 320b1c2af77554f99a1658df4a6d3d5c, type: 3}
@@ -4215,11 +4226,11 @@ PrefabInstance:
       objectReference: {fileID: 400344590}
     - target: {fileID: 989987302396853645, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: m_Name
-      value: CompanionBot
+      value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 989987302396853645, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5702143914862606439, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: game
@@ -4228,7 +4239,7 @@ PrefabInstance:
     - target: {fileID: 5702143914862606439, guid: d74133ccf45c99344938f14651e34565, type: 3}
       propertyPath: player
       value: 
-      objectReference: {fileID: 1463777476}
+      objectReference: {fileID: 1341621660}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d74133ccf45c99344938f14651e34565, type: 3}
 --- !u!4 &6699009367515462458 stripped

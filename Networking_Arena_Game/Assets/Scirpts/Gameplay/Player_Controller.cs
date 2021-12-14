@@ -346,17 +346,17 @@ public class Player_Controller : MonoBehaviour
     void ManagePlayerPositionHelper() 
     {
         
-        if (distanceThreshold.x < Mathf.Abs(transform.position.x - enemyPlayer.transform.position.x) || distanceThreshold.y < Mathf.Abs(transform.position.z - enemyPlayer.transform.position.z))
-        {
-            playerPositionHelper.SetActive(true);
-        }
-        else 
-        {
-            playerPositionHelper.SetActive(false);
-        }
+        //if (distanceThreshold.x < Mathf.Abs(transform.position.x - enemyPlayer.transform.position.x) || distanceThreshold.y < Mathf.Abs(transform.position.z - enemyPlayer.transform.position.z))
+        //{
+        //    playerPositionHelper.SetActive(true);
+        //}
+        //else 
+        //{
+        //    playerPositionHelper.SetActive(false);
+        //}
 
-        playerPositionHelper.transform.position = new Vector3(transform.position.x, transform.position.y + 0.1f, transform.position.z) ;
-        playerPositionHelper.transform.LookAt(enemyPlayer.transform.position);
-        playerPositionHelper.transform.eulerAngles = new Vector3(0, playerPositionHelper.transform.eulerAngles.y + 180, 0);
+        //playerPositionHelper.transform.position = new Vector3(transform.position.x, transform.position.y + 0.1f, transform.position.z) ;
+        //playerPositionHelper.transform.LookAt(enemyPlayer.transform.position);
+        //playerPositionHelper.transform.eulerAngles = new Vector3(0, playerPositionHelper.transform.eulerAngles.y + 180, 0);
     }
 }
