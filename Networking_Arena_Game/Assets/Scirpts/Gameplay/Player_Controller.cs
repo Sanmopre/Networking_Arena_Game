@@ -224,11 +224,30 @@ public class Player_Controller : MonoBehaviour
         //Animation state machine
         if (moveInput == Vector3.zero)
         {
-            animator.SetInteger("Run", 0);
+            if (shooting || shootingShotgun)
+            {
+                animator.SetBool("Flex", false);
+                animator.SetBool("Shoot", true);
+            }
+            else if(Input.GetKeyDown(KeyCode.G))
+            {
+                animator.SetInteger("Run", 0);
+                animator.SetBool("Shoot", false);
+                animator.SetBool("Flex", true);
+            }
+            else
+            {
+                animator.SetBool("Shoot", false);
+                animator.SetInteger("Run", 0);
+            }
             return;
         }
         if (moveInput.x != 0 || moveInput.z != 0)
         {
+            //If player start running cut remaining animations
+            animator.SetBool("Shoot", false);
+            animator.SetBool("Flex", false);
+
             //Run forward
             if (dotProduct > 1 - rotateThreshold && dotProduct < 1 + rotateThreshold)
                 animator.SetInteger("Run", 1);
