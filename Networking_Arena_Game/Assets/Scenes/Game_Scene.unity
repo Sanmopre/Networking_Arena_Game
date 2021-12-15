@@ -4300,6 +4300,14 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 16.79
       objectReference: {fileID: 0}
+    - target: {fileID: 5582151888757134076, guid: 68c1fb7bf371f844dbeb66c7b3b04101, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.85
+      objectReference: {fileID: 0}
+    - target: {fileID: 5582151888757134076, guid: 68c1fb7bf371f844dbeb66c7b3b04101, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 3.84
+      objectReference: {fileID: 0}
     - target: {fileID: 5582151889440369513, guid: 68c1fb7bf371f844dbeb66c7b3b04101, type: 3}
       propertyPath: m_Texture
       value: 
