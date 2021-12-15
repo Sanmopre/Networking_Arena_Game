@@ -407,6 +407,9 @@ public class Server : MonoBehaviour
                                             case NetworkStream.Keyword.FNC_MISSILE:
                                                 stream.AddMissileFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].time);
                                                 break;
+                                            case NetworkStream.Keyword.FNC_SHOTGUN:
+                                                stream.AddShotgunFunction(data.functions[f].netId, data.functions[f].owned, data.functions[f].position, data.functions[f].velocity);
+                                                break;
                                             case NetworkStream.Keyword.FNC_HIT: // when receiving a hit from a client
                                                 if (Globals.localTesting)
                                                 {
@@ -455,7 +458,7 @@ public class Server : MonoBehaviour
         player1.Send("match found");
         player2.Send("match found");
 
-        yield return new WaitForSeconds(10.0f);
+        yield return new WaitForSeconds(1.0f);
         
         InputStream toPlayer1 = new InputStream();
         toPlayer1.AddInt(2);

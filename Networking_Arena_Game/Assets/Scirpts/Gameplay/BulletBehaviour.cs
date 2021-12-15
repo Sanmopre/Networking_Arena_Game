@@ -6,7 +6,7 @@ public class BulletBehaviour : MonoBehaviour
 {
     public GameObject   hitParticle;
     private Game_Manager game;
-    public float        lifetime = 1.0f;
+    public float lifetime = 1.0f;
     Client client = null;
 
     private void Start()
@@ -34,8 +34,10 @@ public class BulletBehaviour : MonoBehaviour
     {
         if ((other.gameObject.name == "Enemy" || other.gameObject.name == "Player") && !gameObject.CompareTag(other.gameObject.tag))
         {
-            if(client != null)
+            if (client != null)
                 client.RequestHit(other.gameObject.name, game.bulletDamage);
+            else
+                Debug.Log("Bullet Hit -> " + other.gameObject.name);
             GameObject hitFx = Instantiate(hitParticle, transform.position, Quaternion.identity);
             Destroy(hitFx, 3f);
             Destroy(gameObject);

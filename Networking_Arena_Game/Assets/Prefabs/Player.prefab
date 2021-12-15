@@ -269,16 +269,11 @@ MonoBehaviour:
   bulletForce: 170
   firerate: 0.2
   deviationRange: 0.03
-  shotgunFire: {fileID: 7025019999686932498, guid: 18a2e96bced3cad49b74e8a1f79b4183, type: 3}
+  shotgunFirePrefab: {fileID: 0}
   fireDuration: 0.4
   shotgunfirerate: 1
-  crosshairPrefab: {fileID: 2525643583917749287, guid: 262bb0f5fcffe2a4cb0969066f8faabd, type: 3}
-  explotionCollider: {fileID: 5816772431622093588, guid: 85e22b033ce92e846a787d787bf3d547, type: 3}
-  missilePrefab: {fileID: 6028146140949575064, guid: 9b0aa1688b81cb145827db637e430ab4, type: 3}
-  missileSpawnHeight: 40
-  missileVelocity: -35
-  expltionTimer: 1
-  explotionDuration: 1
+  missilePrefab: {fileID: 7301347128376406736, guid: d414c7579e156374fa79da92134ea44a, type: 3}
+  explosionTime: 1
   grenadeCooldown: 2
   grenadeTimer: 0
   distanceThreshold: {x: 55, y: 42}

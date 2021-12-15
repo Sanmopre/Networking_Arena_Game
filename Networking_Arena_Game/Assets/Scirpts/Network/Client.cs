@@ -63,11 +63,16 @@ public class Client : MonoBehaviour
     {
         sendStream.AddMissileFunction(playerID, true, position, time);
     }
+    public void RequestShotgun(Vector3 position, Vector3 direction)
+    {
+        sendStream.AddShotgunFunction(playerID, true, position, direction);
+    }
     public void RequestHit(string name, int damage)
     {
         Debug.Log("Added hit request");
         NetObject netObj = FindNetObjectByName(name);
-        sendStream.AddHitFunction(netObj.netID, netObj.owned, damage);
+        if (netObj != null)
+            sendStream.AddHitFunction(netObj.netID, netObj.owned, damage);
     }
     // --- !Game ---
 
@@ -314,7 +319,7 @@ public class Client : MonoBehaviour
 
                     foreach (NetObject netObj in netObjects)
                         if (netObj.owned)
-                            sendStream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity);
+                            sendStream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity, netObj.go.transform.rotation.eulerAngles);
 
                     toServer.Send(sendStream.GetBuffer());
                     sendStream = new NetworkStream();
@@ -348,6 +353,10 @@ public class Client : MonoBehaviour
                                     case NetworkStream.Keyword.FNC_MISSILE:
                                         player.InstantiateMissile(data.functions[i].position, data.functions[i].time);
                                         break;
+                                    case NetworkStream.Keyword.FNC_SHOTGUN:
+                                        NetObject netObject = FindNetObject(data.functions[i].netId);
+                                        player.InstantiateShotgun(data.functions[i].position, data.functions[i].velocity, netObject.go, netObject.netID);
+                                        break;
                                     case NetworkStream.Keyword.FNC_HIT:
                                         NetObject netObj = FindNetObject(data.functions[i].netId);
                                         int pl = 1;
@@ -373,7 +382,7 @@ public class Client : MonoBehaviour
                                    
                                    if (netObj == null)
                                        continue;
-                                   netObj.rb.position = data.objects[i].position;
+                                   netObj.go.transform.SetPositionAndRotation(data.objects[i].position, Quaternion.Euler(data.objects[i].direction));
                                    netObj.rb.velocity = data.objects[i].velocity;
                                 }
                                 lastRecvID = data.id;

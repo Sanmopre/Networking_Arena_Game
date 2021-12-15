@@ -11,6 +11,7 @@ using UnityEngine;
 
 public class UDP : MonoBehaviour
 {
+    // TODO: ADD PING SYSTEM TO DETECT DISCONNECTIONS AUTOMATICALLY (POOOG)
     public int port = 0;
 
     [HideInInspector]
@@ -22,7 +23,7 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly float MSG_WAIT_TIME = 3.0f;
     [HideInInspector]
-    static public readonly float SEND_RATE = 0.016f;
+    static public readonly float SEND_RATE = 0.008f;
     [HideInInspector]
     static public readonly byte MESSAGE_SEPARATOR = Encoding.UTF8.GetBytes("\\")[0];
 
@@ -221,13 +222,13 @@ public class UDP : MonoBehaviour
             {
                 if (packet.id <= lastID)
                 {
-                    message = Encoding.UTF8.GetBytes("already received");
+                    Debug.Log(name + " already received: " + Encoding.UTF8.GetString(packet.message));
                     return RecvType.EMPTY;
                 }
                 for (int i = 0; i < receivedIDs.Count; ++i)
                     if (packet.id == receivedIDs[i])
                     {
-                        message = Encoding.UTF8.GetBytes("already received");
+                        Debug.Log(name + " already received: " + Encoding.UTF8.GetString(packet.message));
                         return RecvType.EMPTY;
                     }
 
@@ -301,6 +302,8 @@ public class UDP : MonoBehaviour
         while (!stream.ReachedEnd())
         {
             int size = stream.GetInt();
+            if (size < 0)
+                break;
             messages.Add(stream.GetBytes(size));
         }
 
@@ -367,13 +370,13 @@ public class UDP : MonoBehaviour
             byte[] toReceive = new byte[message.Length - idSize];
             for (int i = 0; i < toReceive.Length; ++i)
                 toReceive[i] = message[i + idSize];
-
+            
             if (ByteArray.Compare(toReceive, DISCONNECT))
             {
                 recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_START, toReceive, from));
                 continue;
             }
-
+            
             toReceive = ByteArray.TrimEnd(toReceive);
             recvPackets.Add(new RecvPacket(recvID, RecvType.MESSAGE, toReceive, from));
         }
@@ -472,7 +475,7 @@ public class UDP : MonoBehaviour
                 }
             }
 
-            SendMessage(stream.GetBuffer(), currentRemote);
+            SendMessage(stream.GetBuffer(true), currentRemote);
         }
 
         currentBufferSize = 0;

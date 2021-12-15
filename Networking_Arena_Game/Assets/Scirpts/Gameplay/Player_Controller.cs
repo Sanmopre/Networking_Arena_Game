@@ -36,8 +36,7 @@ public class Player_Controller : MonoBehaviour
     bool shooting = false;
 
     [Header("Shotgun")]
-    public GameObject shotgunFire;
-    public float fireDuration = 0.25f;
+    public GameObject shotgunFirePrefab;
     public float shotgunfirerate = 1.0f;
     float shotCounter = 0;
     bool shootingShotgun = false;
@@ -73,6 +72,8 @@ public class Player_Controller : MonoBehaviour
 
         if (!Globals.singlePlayer)
             client = GameObject.Find("Client").GetComponent<Client>();
+        else
+            gameObject.tag = "0";
     }
 
 
@@ -287,11 +288,13 @@ public class Player_Controller : MonoBehaviour
     {
         if (firerateCount > firerate)
         {
+            //Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
             Vector3 randomDeviation = new Vector3(Random.Range(deviationRange, -deviationRange), 0, Random.Range(deviationRange, -deviationRange));
+            Vector3 direction = canonPosition.forward + randomDeviation;// + offset;
             if (!Globals.singlePlayer)
-                client.RequestBullet(canonPosition.position, canonPosition.forward + randomDeviation);
+                client.RequestBullet(canonPosition.position, direction);
             else
-                InstantiateBullet(canonPosition.position, canonPosition.forward + randomDeviation, 0);
+                InstantiateBullet(canonPosition.position, direction, 0);
 
             firerateCount = 0;
         }
@@ -299,8 +302,7 @@ public class Player_Controller : MonoBehaviour
 
     public void InstantiateBullet(Vector3 position, Vector3 direction, int shooterID)
     {
-        Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
-        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
+        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction));
         bullet.tag = shooterID.ToString();
 
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
@@ -312,11 +314,21 @@ public class Player_Controller : MonoBehaviour
         if (shotCounter > shotgunfirerate)
         {
             Vector3 offset = new Vector3(0, transform.rotation.eulerAngles.y, 0);
-            GameObject shotgunFireObj = Instantiate(shotgunFire, canonPosition.position, Quaternion.Euler(canonPosition.forward + offset));
-            Destroy(shotgunFireObj, fireDuration);
+
+            if (!Globals.singlePlayer)
+                client.RequestShotgun(canonPosition.position, canonPosition.forward + offset);
+            else
+                InstantiateShotgun(canonPosition.position, canonPosition.forward + offset, gameObject, 0);
+
+
             shotCounter = 0;
-            shotgunFireObj.transform.parent = transform;
         }
+    }
+
+    public void InstantiateShotgun(Vector3 position, Vector3 direction, GameObject parent, int shooterID)
+    {
+        GameObject shotgunFire = Instantiate(shotgunFirePrefab, position, Quaternion.Euler(direction), parent.transform);
+        shotgunFire.tag = shooterID.ToString();
     }
 
     void ManagePlayerPositionHelper() 
