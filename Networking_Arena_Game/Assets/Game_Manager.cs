@@ -128,7 +128,7 @@ public class Game_Manager : MonoBehaviour
             endtext.text = "DEFEAT";
             endTextObject.SetActive(true);
         }
-
+        
 
         if (Player.lives == Enemy.lives)
         {
