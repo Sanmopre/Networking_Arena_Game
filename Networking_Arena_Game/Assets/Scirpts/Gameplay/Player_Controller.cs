@@ -225,41 +225,33 @@ public class Player_Controller : MonoBehaviour
         if (moveInput == Vector3.zero)
         {
             if (shooting || shootingShotgun)
-            {
-                animator.SetBool("Flex", false);
-                animator.SetBool("Shoot", true);
-            }
-            else if(Input.GetKeyDown(KeyCode.G))
-            {
-                animator.SetInteger("Run", 0);
-                animator.SetBool("Shoot", false);
-                animator.SetBool("Flex", true);
-            }
+                animator.SetInteger("State", 5);
             else
-            {
-                animator.SetBool("Shoot", false);
-                animator.SetInteger("Run", 0);
-            }
+                animator.SetInteger("State", 0);
+
+            if(Input.GetKeyDown(KeyCode.G))
+                animator.SetInteger("State", 6);
+
+            
             return;
         }
         if (moveInput.x != 0 || moveInput.z != 0)
         {
             //If player start running cut remaining animations
-            animator.SetBool("Shoot", false);
-            animator.SetBool("Flex", false);
+            animator.SetInteger("State", 0);
 
             //Run forward
             if (dotProduct > 1 - rotateThreshold && dotProduct < 1 + rotateThreshold)
-                animator.SetInteger("Run", 1);
+                animator.SetInteger("State", 1);
             //Run backwards
             if (dotProduct > -1 - rotateThreshold && dotProduct < -1 + rotateThreshold)
-                animator.SetInteger("Run", 2);
+                animator.SetInteger("State", 2);
             //Run right
             if (dotProduct > 0 - rotateThreshold && dotProduct < 0 + rotateThreshold)
-                animator.SetInteger("Run", 3);
+                animator.SetInteger("State", 3);
             //Run left
             if (dotProduct > 0 - rotateThreshold && dotProduct < 0 + rotateThreshold && moveInput.x > 0)
-                animator.SetInteger("Run", 4);
+                animator.SetInteger("State", 4);
         }
 
     }
