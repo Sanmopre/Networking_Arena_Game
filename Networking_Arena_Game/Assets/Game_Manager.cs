@@ -62,7 +62,8 @@ public class Game_Manager : MonoBehaviour
         if (gameStarted)
         TimeManager();
 
-        //Debug.Log(Enemy.hp);
+        if(initial_time < 0)
+            CheckIfWin();
     }
 
     void TimeManager()
@@ -114,6 +115,27 @@ public class Game_Manager : MonoBehaviour
             endtext.text = "DEFEAT";
             endTextObject.SetActive(true);
         }
+
+
+        if(Player.lives > Enemy.lives) 
+        {
+            endtext.text = "VICTORY";
+            endTextObject.SetActive(true);
+        }
+
+        if (Player.lives < Enemy.lives)
+        {
+            endtext.text = "DEFEAT";
+            endTextObject.SetActive(true);
+        }
+
+
+        if (Player.lives == Enemy.lives)
+        {
+            endtext.text = "TIE";
+            endTextObject.SetActive(true);
+        }
+
     }
     
     private void Respawn_Enemy() 
