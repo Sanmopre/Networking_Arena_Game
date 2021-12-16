@@ -1,9 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
 
 public class Game_Manager : MonoBehaviour
 {
+    public Text endtext;
+    public GameObject endTextObject;
+
     //player structure
     public struct player
     {
@@ -48,7 +53,7 @@ public class Game_Manager : MonoBehaviour
 
         playerObject = GameObject.Find("Player");
         enemyObject = GameObject.Find("Enemy");
-
+        endTextObject.SetActive(false);
         gameStarted = true;
     }
 
@@ -97,11 +102,18 @@ public class Game_Manager : MonoBehaviour
     
     private void CheckIfWin()
     {
-        if (Enemy.lives == 0)
-            Debug.Log("Player won");
+        if (Enemy.lives == 0) 
+        {
+            endtext.text = "VICTORY";
+            endTextObject.SetActive(true);
+        }
+            
 
         if (Player.lives == 0)
-            Debug.Log("Enemy won");
+        {
+            endtext.text = "DEFEAT";
+            endTextObject.SetActive(true);
+        }
     }
     
     private void Respawn_Enemy() 
