@@ -60,6 +60,15 @@ public class Player_Controller : MonoBehaviour
     public int GetAnimationState() { return -1; } // TODO: IMPLEMENT THIS TO PASS THE STATE TO THE CLIENT
     //float lookAndMoveAngle;
 
+    [Header("Audio Vars")]
+    public float volume = 100;
+    public AudioSource runSFX;
+    public AudioSource dashSFX;
+    public AudioSource shootRifleSFX;
+    public AudioSource shootShotgunSFX;
+    public AudioSource hitSFX;
+    public AudioSource hurtSFX;
+
     // --- Networking ---
     Client client = null;
     // --- !Networking ---
@@ -71,7 +80,7 @@ public class Player_Controller : MonoBehaviour
         animator = GetComponent<Animator>();
         grenadeTimer = grenadeCooldown;
         enemyPlayer = GameObject.Find("Enemy");
-
+         
         if (!Globals.singlePlayer)
             client = GameObject.Find("Client").GetComponent<Client>();
         else
@@ -142,7 +151,9 @@ public class Player_Controller : MonoBehaviour
     }
 
     private void Dash(Vector3 dashDirection) 
-    {
+    {   
+        dashSFX.Play();
+        
         if (!firstDash) 
         {
             firstDash = true;
