@@ -13,7 +13,7 @@ public class Client : MonoBehaviour
     UDP toServer = null;
 
     bool toRegister;
-    string username;
+    public string username;
     string password;
     
     int notAcknowleged;

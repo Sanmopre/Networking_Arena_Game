@@ -8,9 +8,16 @@ public class healthBarManager : MonoBehaviour
     public Player_Controller player;
     public Image healthBar;
     public Game_Manager game;
+    public Text name;
 
+    private void Start()
+    {
+        if(!Globals.singlePlayer)
+            name.text = GameObject.Find("Client").GetComponent<Client>().username;
+    }
     private void LateUpdate()
     {
+
         transform.LookAt(player.cameraPositionForCanvas);
         transform.Rotate(0,180,0);
         transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, 0);
