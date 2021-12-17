@@ -310,7 +310,7 @@ public class Server : MonoBehaviour
                                     lobby = lobbies[i];
                                     if (LobbyAddPlayer(lobby, client))
                                     {
-                                        StartCoroutine(StartMatch(lobby.value.player1.value.socket, lobby.value.player2.value.socket));
+                                        StartCoroutine(StartMatch(lobby.value.player1, lobby.value.player2));
                                         break;
                                     }
                                     lobby = null;
@@ -468,31 +468,35 @@ public class Server : MonoBehaviour
         }
     }
 
-    IEnumerator StartMatch(UDP player1, UDP player2)
+    IEnumerator StartMatch(Ref<Client> player1, Ref<Client> player2)
     {
         Debug.Log("Server notified match");
-        player1.Send("match found");
-        player2.Send("match found");
+        player1.value.socket.Send("match found");
+        player2.value.socket.Send("match found");
 
         yield return new WaitForSeconds(0.2f);
         
         InputStream toPlayer1 = new InputStream();
+        // toPlayer1.AddInt(player2.value.name.Length);
+        //toPlayer1.AddString(player2.value.name);
         toPlayer1.AddInt(2);
         toPlayer1.AddInt(0);
-        toPlayer1.AddVector3(new Vector3(-20.0f, 0.5f, 0));
+        toPlayer1.AddVector3(new Vector3(-20.0f, 5f, 0));
         toPlayer1.AddInt(1);
-        toPlayer1.AddVector3(new Vector3(20.0f, 0.5f, 0));
+        toPlayer1.AddVector3(new Vector3(20.0f, 5f, 0));
 
         InputStream toPlayer2 = new InputStream();
+       // toPlayer1.AddInt(player1.value.name.Length);
+       // toPlayer1.AddString(player1.value.name);
         toPlayer2.AddInt(2);
         toPlayer2.AddInt(1);
-        toPlayer2.AddVector3(new Vector3(20.0f, 0.5f, 0));
+        toPlayer2.AddVector3(new Vector3(20.0f, 5f, 0));
         toPlayer2.AddInt(0);
-        toPlayer2.AddVector3(new Vector3(-20.0f, 0.5f, 0));
+        toPlayer2.AddVector3(new Vector3(-20.0f, 5f, 0));
 
         Debug.Log("Server sent match data");
-        player1.Send(toPlayer1.GetBuffer());
-        player2.Send(toPlayer2.GetBuffer());
+        player1.value.socket.Send(toPlayer1.GetBuffer());
+        player2.value.socket.Send(toPlayer2.GetBuffer());
     }
 
     Ref<Client> FindClientByName(string name, ref int index)

@@ -297,6 +297,7 @@ public class Client : MonoBehaviour
                             case UDP.RecvType.MESSAGE:
                                 OutputStream oStream = new OutputStream(received);
 
+                                string enemyName = "banana";//oStream.GetString(oStream.GetInt());
                                 playerAmount = oStream.GetInt();
                                 playerID = lastNetID = oStream.GetInt();
                                 playerOriginalPos = oStream.GetVector3();
@@ -321,6 +322,7 @@ public class Client : MonoBehaviour
                                     go.tag = enemyNetID.ToString();
 
                                     no.enemyScript = go.GetComponent<Enemy_Controller>();
+                                    no.enemyScript.username = enemyName;
 
                                     no.rb.position = enemyPosition;
                                     netObjects.Add(no);
