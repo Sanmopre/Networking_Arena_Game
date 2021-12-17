@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 public class Client : MonoBehaviour
 {
-    EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6969);
+    EndPoint serverAddress = new IPEndPoint(IPAddress.None, 6969);
 
     UDP toServer = null;
 
@@ -34,6 +34,9 @@ public class Client : MonoBehaviour
         REPLACED
     }
     State state = State.SET_ID_DATA;
+
+    float loginTimer = 0.0f; // TODO: CUTRE NEED TO REMOVE
+    float loginMaxTime = 2.0f;
 
     // --- UI ---
     [HideInInspector]
@@ -75,6 +78,10 @@ public class Client : MonoBehaviour
         NetObject netObj = FindNetObjectByName(name);
         if (netObj != null)
             sendStream.AddHitFunction(netObj.netID, netObj.owned, damage);
+    }
+    public void RequestEnd()
+    {
+        sendStream.AddEndFunction(playerID, true);
     }
     // --- !Game ---
 
@@ -142,17 +149,33 @@ public class Client : MonoBehaviour
         switch (state)
         {
             case State.SET_ID_DATA:
+                GameObject serverTextGo = GameObject.Find("CurrentServer_Text");
+                if (serverTextGo != null)
+                {
+                    Text serverText = serverTextGo.GetComponent<Text>();
+                    if (serverText)
+                        serverText.text = "Current Server: " + toServer.RemoteAddressStr();
+                }
+                toServer.remoteAddress = serverAddress;
                 break;
             case State.SEND_ID_DATA:
+                toServer.remoteAddress = serverAddress;
                 char type = 'l';
                 if (toRegister)
                     type = 'r';
-                toServer.remoteAddress = serverAddress;
                 notAcknowleged = toServer.Send(type + username + " " + password);
                 if (notAcknowleged != -1)
+                {
                     state = State.RECV_ID_CONF;
+                    loginTimer = Time.realtimeSinceStartup; // TODO REMOVE
+                }
                 break;
             case State.RECV_ID_CONF:
+                if (Time.realtimeSinceStartup >= loginTimer + loginMaxTime) // TODO REMOVE
+                {
+                    state = State.SET_ID_DATA; // TODO REMOVE
+                    Log("No response from server :(");
+                }
                 while (toServer.CanReceive())
                 {
                     string received = "";
@@ -255,7 +278,7 @@ public class Client : MonoBehaviour
                 }
                 break;
             case State.GAME_SETUP:
-                if (SceneManager.GetActiveScene().name == "Game_Scene") // TODO: BACK TO MENU YEP YEP
+                if (SceneManager.GetActiveScene().name == "Game_Scene")
                 {
                     Debug.Log("Loaded game scene");
                     while (toServer.CanReceive())
@@ -321,7 +344,7 @@ public class Client : MonoBehaviour
             case State.IN_GAME:
                 if (Time.realtimeSinceStartup >= lastDataSent + UDP.SEND_RATE)
                 {
-                    sendStream.AddIdData(sendID);
+                    sendStream.AddIdData(sendID, game.round);
                     ++sendID;
 
                     foreach (NetObject netObj in netObjects)
@@ -355,6 +378,9 @@ public class Client : MonoBehaviour
                             NetworkStream.Data data = NetworkStream.Deserialize(received);
                             if (data == null)
                                 break;
+                            if (data.round != game.round)
+                                break;
+
                             for (int i = 0; i < data.functions.Count; ++i)
                             {
                                 switch (data.functions[i].functionType)
@@ -377,7 +403,7 @@ public class Client : MonoBehaviour
                                         game.TakeDamage(data.functions[i].damage, pl);
                                         break;
                                     case NetworkStream.Keyword.FNC_END:
-                                        LoadMainMenu();
+                                        SceneManager.LoadScene("MainMenuScene");
                                         state = State.BACK_TO_MENU;
                                         break;
                                 }
@@ -412,6 +438,20 @@ public class Client : MonoBehaviour
             case State.BACK_TO_MENU:
                 if (SceneManager.GetActiveScene().name == "MainMenuScene")
                 {
+                    player = null;
+                    game = null;
+
+                    sendStream = new NetworkStream();
+                    lastDataSent = 0.0f;
+                    sendID = 0;
+                    lastRecvID = 0;
+                    lastNetID = 0;
+                    playerAmount = 2;
+                    playerID = 0;
+                    playerOriginalPos = Vector3.zero;
+
+                    netObjects.Clear();
+
                     LoadMainMenu();
                     state = State.IN_MENU;
                 }
@@ -460,6 +500,14 @@ public class Client : MonoBehaviour
     {
         if (state == State.SET_ID_DATA)
             this.password = password;
+    }
+    public void InputServerIP(string serverIP)
+    {
+        if (state == State.SET_ID_DATA)
+        {
+            toServer.Close();
+            serverAddress = new IPEndPoint(IPAddress.Parse(serverIP), 6969);
+        }
     }
 
     public void LogIn()
@@ -510,7 +558,6 @@ public class Client : MonoBehaviour
 
         toServer.Send("quickmatch");
         state = State.WAITING_FOR_MATCH;
-        menuScript.Quickplay_Button();
     }
 
     bool CheckValidName(string name)
@@ -530,13 +577,8 @@ public class Client : MonoBehaviour
 
     void LoadMainMenu()
     {
-        if (SceneManager.GetActiveScene().name == "Game_Scene")
-        {
-            SceneManager.LoadScene("MainMenuScene");
-            Debug.Log("Back to menu");
-        }
         if (menuScript != null)
-            menuScript.Log_In();
+            menuScript.LogScreen();
         if (menuNameText != null)
             menuNameText.text = username;
 

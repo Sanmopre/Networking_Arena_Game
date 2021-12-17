@@ -13,7 +13,7 @@ public class NetworkStream
     }
     public NetworkStream(Data data)
     {
-        AddIdData(data.id);
+        AddIdData(data.id, data.round);
 
         for (int i = 0; i < data.functions.Count; ++i)
             AddFunction(data.functions[i].functionType, data.functions[i].netId, data.functions[i].owned, data.functions[i].position, data.functions[i].velocity, data.functions[i].damage);
@@ -50,9 +50,10 @@ public class NetworkStream
         FNC_END = 6
     }
 
-    public void AddIdData(int id)
+    public void AddIdData(int id, int round)
     {
         idData.Write(BitConverter.GetBytes(id), 0, INT_SIZE);
+        idData.Write(BitConverter.GetBytes(round), 0, INT_SIZE);
     }
 
     void AddFunctionHeader(Keyword type, int netId, bool owned)
@@ -242,12 +243,14 @@ public class NetworkStream
     }
     public class Data
     {
-        public Data(int id)
+        public Data(int id, int round)
         {
             this.id = id;
+            this.round = round;
         }
 
         public int id;
+        public int round;
         public List<Function> functions = new List<Function>();
         public List<Object> objects = new List<Object>();
     }
@@ -255,11 +258,11 @@ public class NetworkStream
     public static Data Deserialize(byte[] data)
     {
         OutputStream stream = new OutputStream(data);
-        byte[] buffer = new byte[16];
 
         int id = stream.GetInt();
+        int round = stream.GetInt();
 
-        Data retData = new Data(id);
+        Data retData = new Data(id, round);
 
         Keyword type = (Keyword)stream.GetInt();
 

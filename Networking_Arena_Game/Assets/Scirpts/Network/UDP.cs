@@ -574,7 +574,14 @@ public class UDP : MonoBehaviour
                 {
                     if (pack.time < date)
                     {
-                        thisSocket.SendTo(pack.packet, pack.packet.Length, SocketFlags.None, pack.ip);
+                        try
+                        {
+                            thisSocket.SendTo(pack.packet, pack.packet.Length, SocketFlags.None, pack.ip);
+                        }
+                        catch
+                        {
+                            ReportError("Send Error!");
+                        }
                         lock (myLock)
                             packetBuffer.RemoveAt(i);
 

@@ -31,6 +31,9 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Main_Menu.SetActive(false);
         Searching_Menu.SetActive(true);
         First_Menu.SetActive(false);
+
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().RequestQuickMatch();
     }
 
     public void Join_Lobby()
@@ -70,13 +73,35 @@ public class Main_Menu_Behaviour : MonoBehaviour
 
     public void Log_In() 
     {
-        Lobby_Menu.SetActive(false);
-        Main_Menu.SetActive(true);
-        Searching_Menu.SetActive(false);
-        First_Menu.SetActive(false);
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().LogIn();
     }
 
     public void Register()
+    {
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().Register();
+    }
+
+    public void InputUsername(string username)
+    {
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().InputUsername(username);
+    }
+
+    public void InputPassword(string password)
+    {
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().InputPassword(password);
+    }
+
+    public void InputServerIP(string serverIP)
+    {
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().InputServerIP(serverIP);
+    }
+
+    public void LogScreen()
     {
         Lobby_Menu.SetActive(false);
         Main_Menu.SetActive(true);
@@ -90,6 +115,9 @@ public class Main_Menu_Behaviour : MonoBehaviour
         Main_Menu.SetActive(false);
         Searching_Menu.SetActive(false);
         First_Menu.SetActive(true);
+
+        if (!Globals.singlePlayer)
+            GameObject.Find("Client").GetComponent<Client>().LogOut();
     }
 
     void RefreshLobbyList() 

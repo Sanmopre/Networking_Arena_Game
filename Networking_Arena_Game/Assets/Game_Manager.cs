@@ -22,6 +22,7 @@ public class Game_Manager : MonoBehaviour
     public int numberOfLifes = 4;
     public float player_HP = 100;
     private bool gameStarted = false;
+    public int round = 0;
 
     //players
     public player Player;
@@ -42,6 +43,8 @@ public class Game_Manager : MonoBehaviour
     private GameObject enemyObject;
 
     public Game_Menu_Manager menu_manager;
+
+    Client client = null;
     
     void Start()
     {
@@ -55,6 +58,9 @@ public class Game_Manager : MonoBehaviour
         enemyObject = GameObject.Find("Enemy");
         endTextObject.SetActive(false);
         gameStarted = true;
+
+        if (!Globals.singlePlayer)
+            client = GameObject.Find("Client").GetComponent<Client>();
     }
 
     void Update()
@@ -107,6 +113,9 @@ public class Game_Manager : MonoBehaviour
         {
             endtext.text = "VICTORY";
             endTextObject.SetActive(true);
+
+            if (client != null)
+                client.RequestEnd();
         }
             
 
@@ -114,6 +123,9 @@ public class Game_Manager : MonoBehaviour
         {
             endtext.text = "DEFEAT";
             endTextObject.SetActive(true);
+
+            if (client != null)
+                client.RequestEnd();
         }
 
         //if(Player.lives > Enemy.lives) 
@@ -148,5 +160,7 @@ public class Game_Manager : MonoBehaviour
             playerObject.transform.position = respawnPositionPlayer.transform.position;
             enemyObject.transform.position = respawnPositionEnemy.transform.position;
         }
+
+        ++round;
     }
 }

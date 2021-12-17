@@ -128,6 +128,7 @@ public class Server : MonoBehaviour
             player2 = null;
 
             hitRequests = new List<HitRequest>();
+            endRequests = 0;
         }
 
         public int id;
@@ -137,6 +138,7 @@ public class Server : MonoBehaviour
         public Ref<Client> player2;
 
         public List<HitRequest> hitRequests;
+        public int endRequests;
     }
 
     bool LobbyAddPlayer(Ref<Lobby> lobby, Ref<Client> client)
@@ -379,7 +381,7 @@ public class Server : MonoBehaviour
                                             if (senderRTT < otherRTT) // if the sender has better connection...
                                             {
                                                 NetworkStream stream = new NetworkStream();
-                                                stream.AddIdData(0);
+                                                stream.AddIdData(0, data.round);
                                                 stream.AddHitFunction(hitRequest.netId, false, lobby.value.hitRequests[h].damage);
                                                 byte[] buffer = stream.GetBuffer();
 
@@ -396,7 +398,7 @@ public class Server : MonoBehaviour
                                 if (data.functions.Count > 0)
                                 {
                                     NetworkStream stream = new NetworkStream();
-                                    stream.AddIdData(0);
+                                    stream.AddIdData(0, data.round);
                                     for (int f = 0; f < data.functions.Count; ++f)
                                     {
                                         switch (data.functions[f].functionType)
@@ -436,6 +438,20 @@ public class Server : MonoBehaviour
                                                     data.functions.RemoveAt(f); // remove the function from the deserialized data
                                                     --f;
                                                     received = new NetworkStream(data).GetBuffer(); // and update the byte array we resend to the other player
+                                                }
+                                                break;
+                                            case NetworkStream.Keyword.FNC_END:
+                                                ++lobby.value.endRequests;
+                                                if (lobby.value.endRequests == 2)
+                                                {
+                                                    stream.AddEndFunction(0, false);
+                                                    LobbyDismatle(lobby);
+                                                }
+                                                else
+                                                {
+                                                    data.functions.RemoveAt(f);
+                                                    --f;
+                                                    received = new NetworkStream(data).GetBuffer();
                                                 }
                                                 break;
                                         }
