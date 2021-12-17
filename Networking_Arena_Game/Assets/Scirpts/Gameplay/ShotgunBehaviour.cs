@@ -9,6 +9,8 @@ public class ShotgunBehaviour : MonoBehaviour
 
     public float lifeTime = 0.25f;
 
+    List<GameObject> hitObjs = new List<GameObject>();
+
     private void Start()
     {
         if (!Globals.singlePlayer)
@@ -20,6 +22,11 @@ public class ShotgunBehaviour : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        foreach (GameObject go in hitObjs)
+            if (go == other.gameObject)
+                return;
+        hitObjs.Add(other.gameObject);
+
         if (!gameObject.CompareTag(other.gameObject.tag))
         {
             if (!Globals.singlePlayer)

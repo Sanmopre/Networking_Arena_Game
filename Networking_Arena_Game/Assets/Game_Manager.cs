@@ -80,7 +80,7 @@ public class Game_Manager : MonoBehaviour
                 Player.hp -= damage;
                 if (Player.hp <= 0)
                 {
-                    Respawn_Player();
+                    Respawn();
                     Player.lives -= 1;
                     menu_manager.UpdatePlayerLifesUI();
                     CheckIfWin();
@@ -90,7 +90,7 @@ public class Game_Manager : MonoBehaviour
                 Enemy.hp -= damage;
                 if (Enemy.hp <= 0)
                 {
-                    Respawn_Enemy();
+                    Respawn();
                     Enemy.lives -= 1;
                     menu_manager.UpdatePlayerLifesUI();
                     CheckIfWin();
@@ -116,37 +116,37 @@ public class Game_Manager : MonoBehaviour
             endTextObject.SetActive(true);
         }
 
-
-        if(Player.lives > Enemy.lives) 
-        {
-            endtext.text = "VICTORY";
-            endTextObject.SetActive(true);
-        }
-
-        if (Player.lives < Enemy.lives)
-        {
-            endtext.text = "DEFEAT";
-            endTextObject.SetActive(true);
-        }
-        
-
-        if (Player.lives == Enemy.lives)
-        {
-            endtext.text = "TIE";
-            endTextObject.SetActive(true);
-        }
+        //if(Player.lives > Enemy.lives) 
+        //{
+        //    endtext.text = "VICTORY";
+        //    endTextObject.SetActive(true);
+        //}
+        //
+        //if (Player.lives < Enemy.lives)
+        //{
+        //    endtext.text = "DEFEAT";
+        //    endTextObject.SetActive(true);
+        //}
+        //
+        //
+        //if (Player.lives == Enemy.lives)
+        //{
+        //    endtext.text = "TIE";
+        //    endTextObject.SetActive(true);
+        //}
 
     }
-    
-    private void Respawn_Enemy() 
-    {
-        Enemy.hp = player_HP;
-        enemyObject.transform.position = respawnPositionEnemy.transform.position;
-    }
 
-    private void Respawn_Player()
+    private void Respawn()
     {
         Player.hp = player_HP;
-        playerObject.transform.position = respawnPositionPlayer.transform.position;
+        Enemy.hp = player_HP;
+        if (!Globals.singlePlayer)
+            playerObject.transform.position = GameObject.Find("Client").GetComponent<Client>().playerOriginalPos;
+        else
+        {
+            playerObject.transform.position = respawnPositionPlayer.transform.position;
+            enemyObject.transform.position = respawnPositionEnemy.transform.position;
+        }
     }
 }

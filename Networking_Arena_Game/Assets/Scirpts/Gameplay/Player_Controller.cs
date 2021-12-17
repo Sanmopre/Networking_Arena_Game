@@ -56,6 +56,7 @@ public class Player_Controller : MonoBehaviour
     private Animator animator;
     public float rotateThreshold;
     private float dotProduct;
+    public int GetAnimationState() { return -1; } // TODO: IMPLEMENT THIS TO PASS THE STATE TO THE CLIENT
     //float lookAndMoveAngle;
 
     // --- Networking ---

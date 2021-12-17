@@ -336,9 +336,9 @@ public class Server : MonoBehaviour
                                 InputStream toPlayer1 = new InputStream();
                                 toPlayer1.AddInt(2);
                                 toPlayer1.AddInt(0);
-                                toPlayer1.AddVector3(new Vector3(-10.0f, 0.5f, 0));
+                                toPlayer1.AddVector3(new Vector3(-20.0f, 0.5f, 0));
                                 toPlayer1.AddInt(1);
-                                toPlayer1.AddVector3(new Vector3(10.0f, 0.5f, 0));
+                                toPlayer1.AddVector3(new Vector3(20.0f, 0.5f, 0));
 
                                 Debug.Log("Server sent match data");
                                 client.value.socket.Send(toPlayer1.GetBuffer());
@@ -458,21 +458,21 @@ public class Server : MonoBehaviour
         player1.Send("match found");
         player2.Send("match found");
 
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(0.2f);
         
         InputStream toPlayer1 = new InputStream();
         toPlayer1.AddInt(2);
         toPlayer1.AddInt(0);
-        toPlayer1.AddVector3(new Vector3(-10.0f, 0.5f, 0));
+        toPlayer1.AddVector3(new Vector3(-20.0f, 0.5f, 0));
         toPlayer1.AddInt(1);
-        toPlayer1.AddVector3(new Vector3(10.0f, 0.5f, 0));
+        toPlayer1.AddVector3(new Vector3(20.0f, 0.5f, 0));
 
         InputStream toPlayer2 = new InputStream();
         toPlayer2.AddInt(2);
         toPlayer2.AddInt(1);
-        toPlayer2.AddVector3(new Vector3(10.0f, 0.5f, 0));
+        toPlayer2.AddVector3(new Vector3(20.0f, 0.5f, 0));
         toPlayer2.AddInt(0);
-        toPlayer2.AddVector3(new Vector3(-10.0f, 0.5f, 0));
+        toPlayer2.AddVector3(new Vector3(-20.0f, 0.5f, 0));
 
         Debug.Log("Server sent match data");
         player1.Send(toPlayer1.GetBuffer());

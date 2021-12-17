@@ -18,7 +18,7 @@ public class NetworkStream
         for (int i = 0; i < data.functions.Count; ++i)
             AddFunction(data.functions[i].functionType, data.functions[i].netId, data.functions[i].owned, data.functions[i].position, data.functions[i].velocity, data.functions[i].damage);
         for (int i = 0; i < data.objects.Count; ++i)
-            AddObject(data.objects[i].netId, data.objects[i].position, data.objects[i].velocity, data.objects[i].direction);
+            AddObject(data.objects[i].netId, data.objects[i].position, data.objects[i].velocity, data.objects[i].direction, data.objects[i].state);
     }
 
     ~NetworkStream()
@@ -46,7 +46,8 @@ public class NetworkStream
         FNC_BULLET = 2,
         FNC_MISSILE = 3,
         FNC_SHOTGUN = 4,
-        FNC_HIT = 5
+        FNC_HIT = 5,
+        FNC_END = 6
     }
 
     public void AddIdData(int id)
@@ -128,7 +129,14 @@ public class NetworkStream
         ++fncCount;
     }
 
-    public void AddObject(int netId, Vector3 position, Vector3 velocity, Vector3 direction)
+    public void AddEndFunction(int netId, bool owned)
+    {
+        AddFunctionHeader(Keyword.FNC_END, netId, owned);
+
+        ++fncCount;
+    }
+
+    public void AddObject(int netId, Vector3 position, Vector3 velocity, Vector3 direction, int state)
     {
         objData.Write(BitConverter.GetBytes(netId), 0, INT_SIZE);
 
@@ -143,6 +151,8 @@ public class NetworkStream
         objData.Write(BitConverter.GetBytes((double)direction.x), 0, DOUBLE_SIZE);
         objData.Write(BitConverter.GetBytes((double)direction.y), 0, DOUBLE_SIZE);
         objData.Write(BitConverter.GetBytes((double)direction.z), 0, DOUBLE_SIZE);
+
+        objData.Write(BitConverter.GetBytes(state), 0, INT_SIZE);
 
         ++objCount;
     }
@@ -215,18 +225,20 @@ public class NetworkStream
     }
     public struct Object
     {
-        public Object(int netId, Vector3 position, Vector3 velocity, Vector3 direction)
+        public Object(int netId, Vector3 position, Vector3 velocity, Vector3 direction, int state)
         {
             this.netId = netId;
             this.position = position;
             this.velocity = velocity;
             this.direction = direction;
+            this.state = state;
         }
 
         public int netId;
         public Vector3 position;
         public Vector3 velocity;
         public Vector3 direction;
+        public int state;
     }
     public class Data
     {
@@ -294,6 +306,9 @@ public class NetworkStream
 
                         retData.functions.Add(new Function(functionType, netId, owned, Vector3.zero, Vector3.zero, 0, damage));
                         break;
+                    case Keyword.FNC_END:
+                        retData.functions.Add(new Function(functionType, netId, owned, Vector3.zero, Vector3.zero, 0, 0));
+                        break;
                 }
             }
 
@@ -314,7 +329,9 @@ public class NetworkStream
                 Vector3 velocity = stream.GetVector3();
                 Vector3 direction = stream.GetVector3();
 
-                retData.objects.Add(new Object(netId, position, velocity, direction));
+                int state = stream.GetInt();
+
+                retData.objects.Add(new Object(netId, position, velocity, direction, state));
             }
         }
 

@@ -28,6 +28,7 @@ public class Client : MonoBehaviour
         WAITING_FOR_MATCH,
         GAME_SETUP,
         IN_GAME,
+        BACK_TO_MENU,
         DISCONNECTING,
         DISCONNECTED,
         REPLACED
@@ -54,6 +55,7 @@ public class Client : MonoBehaviour
     int lastNetID = 0;
     int playerAmount = 2;
     public int playerID = 0;
+    public Vector3 playerOriginalPos = Vector3.zero;
 
     public void RequestBullet(Vector3 position, Vector3 velocity)
     {
@@ -85,11 +87,13 @@ public class Client : MonoBehaviour
             this.go = go;
             this.rb = rb;
             this.owned = owned;
+            enemyScript = null;
         }
         public int netID;
         public GameObject go;
         public Rigidbody rb;
         public bool owned;
+        public Enemy_Controller enemyScript;
     }
     List<NetObject> netObjects = new List<NetObject>();
 
@@ -251,7 +255,7 @@ public class Client : MonoBehaviour
                 }
                 break;
             case State.GAME_SETUP:
-                if (SceneManager.GetActiveScene().name == "Game_Scene")
+                if (SceneManager.GetActiveScene().name == "Game_Scene") // TODO: BACK TO MENU YEP YEP
                 {
                     Debug.Log("Loaded game scene");
                     while (toServer.CanReceive())
@@ -272,7 +276,7 @@ public class Client : MonoBehaviour
 
                                 playerAmount = oStream.GetInt();
                                 playerID = lastNetID = oStream.GetInt();
-                                Vector3 playerPosition = oStream.GetVector3();
+                                playerOriginalPos = oStream.GetVector3();
                                 int enemyNetID = oStream.GetInt();
                                 Vector3 enemyPosition = oStream.GetVector3();
 
@@ -283,7 +287,7 @@ public class Client : MonoBehaviour
 
                                     NetObject no = new NetObject(lastNetID, go, go.GetComponent<Rigidbody>(), true);
                                     go.tag = playerID.ToString();
-                                    no.rb.position = playerPosition;
+                                    no.rb.position = playerOriginalPos;
                                     netObjects.Add(no);
                                     Debug.Log("Added player");
                                 }
@@ -292,6 +296,9 @@ public class Client : MonoBehaviour
                                 {
                                     NetObject no = new NetObject(enemyNetID, go, go.GetComponent<Rigidbody>(), false);
                                     go.tag = enemyNetID.ToString();
+
+                                    no.enemyScript = go.GetComponent<Enemy_Controller>();
+
                                     no.rb.position = enemyPosition;
                                     netObjects.Add(no);
                                     Debug.Log("Added enemy");
@@ -319,7 +326,12 @@ public class Client : MonoBehaviour
 
                     foreach (NetObject netObj in netObjects)
                         if (netObj.owned)
-                            sendStream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity, netObj.go.transform.rotation.eulerAngles);
+                        {
+                            int state = -1;
+                            if (netObj.netID == playerID)
+                                state = player.GetAnimationState();
+                            sendStream.AddObject(netObj.netID, netObj.rb.position, netObj.rb.velocity, netObj.go.transform.rotation.eulerAngles, state);
+                        }
 
                     toServer.Send(sendStream.GetBuffer());
                     sendStream = new NetworkStream();
@@ -364,6 +376,10 @@ public class Client : MonoBehaviour
                                             pl = 2;
                                         game.TakeDamage(data.functions[i].damage, pl);
                                         break;
+                                    case NetworkStream.Keyword.FNC_END:
+                                        LoadMainMenu();
+                                        state = State.BACK_TO_MENU;
+                                        break;
                                 }
                             }
 
@@ -384,11 +400,20 @@ public class Client : MonoBehaviour
                                        continue;
                                    netObj.go.transform.SetPositionAndRotation(data.objects[i].position, Quaternion.Euler(data.objects[i].direction));
                                    netObj.rb.velocity = data.objects[i].velocity;
+                                    if (netObj.enemyScript != null)
+                                        netObj.enemyScript.SetAnimationState(data.objects[i].state);
                                 }
                                 lastRecvID = data.id;
                             }
                             break;
                     }
+                }
+                break;
+            case State.BACK_TO_MENU:
+                if (SceneManager.GetActiveScene().name == "MainMenuScene")
+                {
+                    LoadMainMenu();
+                    state = State.IN_MENU;
                 }
                 break;
             case State.DISCONNECTING:
@@ -505,6 +530,11 @@ public class Client : MonoBehaviour
 
     void LoadMainMenu()
     {
+        if (SceneManager.GetActiveScene().name == "Game_Scene")
+        {
+            SceneManager.LoadScene("MainMenuScene");
+            Debug.Log("Back to menu");
+        }
         if (menuScript != null)
             menuScript.Log_In();
         if (menuNameText != null)
