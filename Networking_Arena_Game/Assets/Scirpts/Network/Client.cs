@@ -297,7 +297,7 @@ public class Client : MonoBehaviour
                             case UDP.RecvType.MESSAGE:
                                 OutputStream oStream = new OutputStream(received);
 
-                                string enemyName = oStream.GetString(oStream.GetInt());
+                                string enemyName = "banana";//oStream.GetString(oStream.GetInt());
                                 playerAmount = oStream.GetInt();
                                 playerID = lastNetID = oStream.GetInt();
                                 playerOriginalPos = oStream.GetVector3();

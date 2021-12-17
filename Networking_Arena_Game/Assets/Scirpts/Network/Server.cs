@@ -477,22 +477,22 @@ public class Server : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
         
         InputStream toPlayer1 = new InputStream();
-        toPlayer1.AddInt(player2.value.name.Length);
-        toPlayer1.AddString(player2.value.name);
+        // toPlayer1.AddInt(player2.value.name.Length);
+        //toPlayer1.AddString(player2.value.name);
         toPlayer1.AddInt(2);
         toPlayer1.AddInt(0);
-        toPlayer1.AddVector3(new Vector3(-20.0f, 0.5f, 0));
+        toPlayer1.AddVector3(new Vector3(-20.0f, 5f, 0));
         toPlayer1.AddInt(1);
-        toPlayer1.AddVector3(new Vector3(20.0f, 0.5f, 0));
+        toPlayer1.AddVector3(new Vector3(20.0f, 5f, 0));
 
         InputStream toPlayer2 = new InputStream();
-        toPlayer1.AddInt(player1.value.name.Length);
-        toPlayer1.AddString(player1.value.name);
+       // toPlayer1.AddInt(player1.value.name.Length);
+       // toPlayer1.AddString(player1.value.name);
         toPlayer2.AddInt(2);
         toPlayer2.AddInt(1);
-        toPlayer2.AddVector3(new Vector3(20.0f, 0.5f, 0));
+        toPlayer2.AddVector3(new Vector3(20.0f, 5f, 0));
         toPlayer2.AddInt(0);
-        toPlayer2.AddVector3(new Vector3(-20.0f, 0.5f, 0));
+        toPlayer2.AddVector3(new Vector3(-20.0f, 5f, 0));
 
         Debug.Log("Server sent match data");
         player1.value.socket.Send(toPlayer1.GetBuffer());
