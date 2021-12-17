@@ -34,6 +34,7 @@ public class Player_Controller : MonoBehaviour
     float firerateCount = 0.0f;
     public float deviationRange = 0.05f;
     bool shooting = false;
+    private Vector3 rotationOffset = new Vector3();
 
     [Header("Shotgun")]
     public GameObject shotgunFirePrefab;
@@ -299,9 +300,8 @@ public class Player_Controller : MonoBehaviour
     {
         if (firerateCount > firerate)
         {
-            //Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
             Vector3 randomDeviation = new Vector3(Random.Range(deviationRange, -deviationRange), 0, Random.Range(deviationRange, -deviationRange));
-            Vector3 direction = canonPosition.forward + randomDeviation;// + offset;
+            Vector3 direction = transform.forward + randomDeviation;
             if (!Globals.singlePlayer)
                 client.RequestBullet(canonPosition.position, direction);
             else
@@ -313,7 +313,8 @@ public class Player_Controller : MonoBehaviour
 
     public void InstantiateBullet(Vector3 position, Vector3 direction, int shooterID)
     {
-        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction));
+        Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
+        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
         bullet.tag = shooterID.ToString();
 
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
