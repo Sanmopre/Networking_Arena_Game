@@ -7,10 +7,13 @@ public class enemyHealthBarManager : MonoBehaviour
 {
     public Image healthBar;
     private Game_Manager game;
-
+    public Text nameText;
     private void Start()
     {
         game = GameObject.Find("GameManager").GetComponent<Game_Manager>();
+
+        if (!Globals.singlePlayer)
+            nameText.text = GameObject.Find("Enemy").GetComponent<Enemy_Controller>().username;
     }
     private void LateUpdate()
     {

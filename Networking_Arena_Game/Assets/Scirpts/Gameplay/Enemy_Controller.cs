@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class Enemy_Controller : MonoBehaviour
 {
+    public string username = "null";
     int animationState = -1;
     public void SetAnimationState(int state) { animationState = state; }
 

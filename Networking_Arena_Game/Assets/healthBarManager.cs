@@ -8,12 +8,12 @@ public class healthBarManager : MonoBehaviour
     public Player_Controller player;
     public Image healthBar;
     public Game_Manager game;
-    public Text name;
+    public Text nameText;
 
     private void Start()
     {
         if(!Globals.singlePlayer)
-            name.text = GameObject.Find("Client").GetComponent<Client>().username;
+            nameText.text = GameObject.Find("Client").GetComponent<Client>().username;
     }
     private void LateUpdate()
     {
