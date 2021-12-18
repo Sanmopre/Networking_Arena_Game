@@ -6,9 +6,6 @@ using UnityEngine.UI;
 
 public class Game_Manager : MonoBehaviour
 {
-    public Text endtext;
-    public GameObject endTextObject;
-
     //player structure
     public struct player
     {
@@ -17,18 +14,24 @@ public class Game_Manager : MonoBehaviour
         //more stuff im guessing
     }
 
-    //In seconds
+    [Header("General Vars")]
     public float initial_time = 90;
     public int numberOfLifes = 4;
     public float player_HP = 100;
     private bool gameStarted = false;
     public int round = 0;
 
-    //players
+    [Header("Players")]
     public player Player;
     public player Enemy;
 
-    //Damage stats
+    [Header("Audio")]
+    public AudioSource bgMusic;
+    public AudioSource hitHurtSource;
+    public AudioClip hitSFX;
+    public AudioClip hurtSFX;
+
+    [Header("Damage Stats")]
     public int bulletDamage = 3;
     public int missileDamage = 35;
     public int shotgunDamage = 20;
@@ -36,14 +39,18 @@ public class Game_Manager : MonoBehaviour
     private bool playerWon = false;
     private bool enemyWon = false;
 
-    //Respawn points
+    [Header("Respawn Points")]
     public GameObject respawnPositionEnemy;
     public GameObject respawnPositionPlayer;
     private GameObject playerObject;
     private GameObject enemyObject;
 
+    [Header("UI")]
     public Game_Menu_Manager menu_manager;
+    public Text endtext;
+    public GameObject endTextObject;
 
+    // NETWORKING
     Client client = null;
     
     void Start()
@@ -84,6 +91,10 @@ public class Game_Manager : MonoBehaviour
         {
             case 1:
                 Player.hp -= damage;
+
+                hitHurtSource.clip = hurtSFX;
+                hitHurtSource.Play();
+
                 if (Player.hp <= 0)
                 {
                     Respawn();
@@ -94,6 +105,10 @@ public class Game_Manager : MonoBehaviour
                 break;
             case 2:
                 Enemy.hp -= damage;
+
+                hitHurtSource.clip = hitSFX;
+                hitHurtSource.Play();
+
                 if (Enemy.hp <= 0)
                 {
                     Respawn();

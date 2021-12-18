@@ -5,21 +5,31 @@ using UnityEngine.UI;
 
 public class Game_Menu_Manager : MonoBehaviour
 {
+    [Header("General")]
     public GameObject GameMenu;
     public GameObject TextObject;
     private Text timerText;
     private Game_Manager gameManager;
 
+    [Header("Player & Enemy")]
     public GameObject PlayerUIprefab;
     public GameObject EnemyUIprefab;
 
     //dont understand how ui works :(
-    public Vector3 canvasOffSet;   
+    [Header("Lifes")]
+    public Vector3 canvasOffset;   
     public GameObject UIPlayer1LiveCount;
     public GameObject UIPlayer2LiveCount;
 
     public float distance_offset_x;
     public float distance_offset_y;
+
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip openMenuSFX;
+    public AudioClip closeMenuSFX;
+    public AudioClip clickedButtonSFX;
+    
     private void Awake()
     {
         GameMenu.SetActive(false);
@@ -39,24 +49,40 @@ public class Game_Menu_Manager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Debug.Log("Escape key was pressed");
+            
+            if (GameMenu.activeSelf)
+            {
+                audioSource.clip = openMenuSFX;
+            }
+            else
+            {
+                audioSource.clip = closeMenuSFX;
+            }
+        
+            audioSource.Play();
+            
             GameMenu.SetActive(!GameMenu.activeSelf);
         }
-
     }
 
     public void Resume_Button() 
     {
+        audioSource.clip = clickedButtonSFX;
+        audioSource.Play();
+        
         GameMenu.SetActive(false);
     }
 
     public void Options_Button() 
     {
-
+        audioSource.clip = clickedButtonSFX;
+        audioSource.Play();
     }
 
     public void Main_Menu_Button() 
     {
-    
+        audioSource.clip = clickedButtonSFX;
+        audioSource.Play();
     }
 
     public void Quit_Button() 
@@ -66,6 +92,17 @@ public class Game_Menu_Manager : MonoBehaviour
 
     public void Pause_Menu_Button()
     {
+        if (GameMenu.activeSelf)
+        {
+            audioSource.clip = openMenuSFX;
+        }
+        else
+        {
+            audioSource.clip = closeMenuSFX;
+        }
+        
+        audioSource.Play();
+        
         GameMenu.SetActive(!GameMenu.activeSelf);
     }
 

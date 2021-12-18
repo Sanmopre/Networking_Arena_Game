@@ -68,12 +68,9 @@ public class Player_Controller : MonoBehaviour
 
     [Header("Audio Vars")]
     public float volume = 100;
-    public AudioSource runSFX;
     public AudioSource dashSFX;
     public AudioSource shootRifleSFX;
     public AudioSource shootShotgunSFX;
-    public AudioSource hitSFX;
-    public AudioSource hurtSFX;
 
     // --- Networking ---
     Client client = null;
@@ -320,6 +317,7 @@ public class Player_Controller : MonoBehaviour
         {
             Vector3 randomDeviation = new Vector3(Random.Range(deviationRange, -deviationRange), 0, Random.Range(deviationRange, -deviationRange));
             Vector3 direction = transform.forward + randomDeviation;
+
             if (!Globals.singlePlayer)
                 client.RequestBullet(canonPosition.position, direction);
             else
@@ -331,6 +329,8 @@ public class Player_Controller : MonoBehaviour
 
     public void InstantiateBullet(Vector3 position, Vector3 direction, int shooterID)
     {
+        shootRifleSFX.Play();
+        
         Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
         GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
         bullet.tag = shooterID.ToString();
@@ -357,6 +357,8 @@ public class Player_Controller : MonoBehaviour
 
     public void InstantiateShotgun(Vector3 position, Vector3 direction, GameObject parent, int shooterID)
     {
+        shootShotgunSFX.Play();
+        
         GameObject shotgunFire = Instantiate(shotgunFirePrefab, position, Quaternion.Euler(direction), parent.transform);
         shotgunFire.tag = shooterID.ToString();
     }
