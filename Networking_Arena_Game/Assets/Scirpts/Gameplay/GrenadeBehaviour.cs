@@ -10,7 +10,6 @@ public class GrenadeBehaviour : MonoBehaviour
     [Header("Audio")]
     public AudioSource audioSource;
     public AudioClip lockTargetSFX;
-    public AudioClip explosionSFX;
 
     private void Start()
     {
@@ -19,12 +18,9 @@ public class GrenadeBehaviour : MonoBehaviour
     }
     
     private void Update()
-    {
+    {   
         if (transform.position.y <= 0.5f)
         {
-            audioSource.clip = explosionSFX;
-            audioSource.Play();
-
             GameObject hitFx = Instantiate(explosionParticle, new Vector3(transform.position.x, 1.0f, transform.position.z), Quaternion.identity);
             Destroy(hitFx, 1f);
             Destroy(gameObject);
