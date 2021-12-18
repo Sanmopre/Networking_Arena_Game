@@ -83,7 +83,7 @@ public class Player_Controller : MonoBehaviour
         animator = GetComponent<Animator>();
         grenadeTimer = grenadeCooldown;
         enemyPlayer = GameObject.Find("Enemy");
-         
+
         if (!Globals.singlePlayer)
             client = GameObject.Find("Client").GetComponent<Client>();
         else
@@ -116,9 +116,12 @@ public class Player_Controller : MonoBehaviour
 
         //SMOOOOTH CAMERA FOLLOW
         CameraFollow();
+
+        PlayerStop();
+
     }
 
-    private void ShootingInput() 
+    private void ShootingInput()
     {
         //Shooting Behaviour
         if (!shootingShotgun && Input.GetMouseButton(0))
@@ -126,7 +129,7 @@ public class Player_Controller : MonoBehaviour
             shooting = true;
             Shoot();
         }
-        else 
+        else
         {
             shooting = false;
         }
@@ -137,27 +140,27 @@ public class Player_Controller : MonoBehaviour
             ShoutgunAttack();
 
         }
-        else 
+        else
         {
             shootingShotgun = false;
         }
-       
+
         if (Input.GetKeyDown(KeyCode.F) && grenadeTimer >= grenadeCooldown)
         {
             ShootMissile();
             grenadeTimer = 0;
         }
-        else 
+        else
         {
             grenadeTimer += Time.deltaTime;
         }
     }
 
-    private void Dash(Vector3 dashDirection) 
-    {   
+    private void Dash(Vector3 dashDirection)
+    {
         dashSFX.Play();
-        
-        if (!firstDash) 
+
+        if (!firstDash)
         {
             firstDash = true;
         }
@@ -166,8 +169,8 @@ public class Player_Controller : MonoBehaviour
         Destroy(dashParticles, 1.0f);
 
         //diagonal force correction
-        if (dashDirection.x != 0 && dashDirection.z != 0) 
-        { 
+        if (dashDirection.x != 0 && dashDirection.z != 0)
+        {
             myRigidbody.AddForce(dashDirection / 2, ForceMode.Impulse);
         }
         else
@@ -181,10 +184,10 @@ public class Player_Controller : MonoBehaviour
         dashCounter = 0.0f;
     }
 
-    private void DashCountersLogic() 
+    private void DashCountersLogic()
     {
         dashCounter += Time.deltaTime;
-        if(dashCounter > dashDuration && !gameObject.GetComponentInChildren<SkinnedMeshRenderer>().enabled)
+        if (dashCounter > dashDuration && !gameObject.GetComponentInChildren<SkinnedMeshRenderer>().enabled)
         {
             gameObject.GetComponentInChildren<SkinnedMeshRenderer>().enabled = true;
             inDash = false;
@@ -203,12 +206,12 @@ public class Player_Controller : MonoBehaviour
         }
     }
 
-    void MovePlayer() 
+    void MovePlayer()
     {
-        if(inDash == false)
+        if (inDash == false)
         {
             //DIAGONAL MOVEMENT CORRECTION (NUT SURE)
-            if (shooting) 
+            if (shooting)
             {
                 if (moveInput.x != 0 && moveInput.z != 0)
                 {
@@ -219,13 +222,13 @@ public class Player_Controller : MonoBehaviour
                     myRigidbody.velocity = moveInput * movementSpeed / speedReductionWhileShooting;
                 }
             }
-            else 
+            else
             {
                 if (moveInput.x != 0 && moveInput.z != 0)
                 {
-                    myRigidbody.velocity = moveInput/ 1.4f * movementSpeed;
+                    myRigidbody.velocity = moveInput / 1.4f * movementSpeed;
                 }
-                else 
+                else
                 {
                     myRigidbody.velocity = moveInput * movementSpeed;
                 }
@@ -245,10 +248,10 @@ public class Player_Controller : MonoBehaviour
             else
                 animator.SetInteger("State", 0);
 
-            if(Input.GetKeyDown(KeyCode.G))
+            if (Input.GetKeyDown(KeyCode.G))
                 animator.SetInteger("State", 6);
 
-            
+
             return;
         }
         if (moveInput.x != 0 || moveInput.z != 0)
@@ -273,14 +276,14 @@ public class Player_Controller : MonoBehaviour
     }
 
 
-    Vector3 GetPlayerPointToLook() 
+    Vector3 GetPlayerPointToLook()
     {
         //Ray to mouse position for rotation
         Ray cameraRay = mainCamera.ScreenPointToRay(Input.mousePosition);
         //Intersection with plane
         Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
         float rayLenght;
-       
+
         if (groundPlane.Raycast(cameraRay, out rayLenght))
         {
             pointToLook = cameraRay.GetPoint(rayLenght);
@@ -303,7 +306,7 @@ public class Player_Controller : MonoBehaviour
         Instantiate(missilePrefab, position, Quaternion.identity).GetComponent<MissileAttack>().explosionTimer = time;
     }
 
-    void CameraFollow() 
+    void CameraFollow()
     {
         Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
         cameraPositionForCanvas = desiredPosition;
@@ -330,7 +333,7 @@ public class Player_Controller : MonoBehaviour
     public void InstantiateBullet(Vector3 position, Vector3 direction, int shooterID)
     {
         shootRifleSFX.Play();
-        
+
         Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
         GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
         bullet.tag = shooterID.ToString();
@@ -339,7 +342,7 @@ public class Player_Controller : MonoBehaviour
         bulletRB.AddForce(direction * bulletForce, ForceMode.Impulse);
     }
 
-    void ShoutgunAttack() 
+    void ShoutgunAttack()
     {
         if (shotCounter > shotgunfirerate)
         {
@@ -358,25 +361,35 @@ public class Player_Controller : MonoBehaviour
     public void InstantiateShotgun(Vector3 position, Vector3 direction, GameObject parent, int shooterID)
     {
         shootShotgunSFX.Play();
-        
+
         GameObject shotgunFire = Instantiate(shotgunFirePrefab, position, Quaternion.Euler(direction), parent.transform);
         shotgunFire.tag = shooterID.ToString();
     }
 
-    void ManagePlayerPositionHelper() 
+    void ManagePlayerPositionHelper()
     {
-        
-       if (distanceThreshold.x < Mathf.Abs(transform.position.x - enemyPlayer.transform.position.x) || distanceThreshold.y < Mathf.Abs(transform.position.z - enemyPlayer.transform.position.z))
-       {
-           playerPositionHelper.SetActive(true);
-       }
-       else 
-       {
-           playerPositionHelper.SetActive(false);
-       }
 
-       playerPositionHelper.transform.position = new Vector3(transform.position.x, transform.position.y - 4f, transform.position.z) ;
-       playerPositionHelper.transform.LookAt(enemyPlayer.transform.position);
-       playerPositionHelper.transform.eulerAngles = new Vector3(0, playerPositionHelper.transform.eulerAngles.y + 180, 0);
+        if (distanceThreshold.x < Mathf.Abs(transform.position.x - enemyPlayer.transform.position.x) || distanceThreshold.y < Mathf.Abs(transform.position.z - enemyPlayer.transform.position.z))
+        {
+            playerPositionHelper.SetActive(true);
+        }
+        else
+        {
+            playerPositionHelper.SetActive(false);
+        }
+
+        playerPositionHelper.transform.position = new Vector3(transform.position.x, transform.position.y - 4f, transform.position.z);
+        playerPositionHelper.transform.LookAt(enemyPlayer.transform.position);
+        playerPositionHelper.transform.eulerAngles = new Vector3(0, playerPositionHelper.transform.eulerAngles.y + 180, 0);
+    }
+
+    void PlayerStop()
+    {
+        if(moveInput.x == 0 && moveInput.z == 0) 
+        {
+            Vector3 noVelocity = new Vector3(0, 0, 0);
+            myRigidbody.velocity = noVelocity;
+        }
+
     }
 }
