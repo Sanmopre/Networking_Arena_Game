@@ -13,8 +13,6 @@ public class PlayOnUnhover : MonoBehaviour, IPointerExitHandler
     {
         audioSource.clip = audioClip;
         audioSource.Play();
-        
-        Debug.Log("Consider Yourself: Hovered");
     }
 }
 

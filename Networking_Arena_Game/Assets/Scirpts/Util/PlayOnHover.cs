@@ -13,7 +13,5 @@ public class PlayOnHover : MonoBehaviour, IPointerEnterHandler
     {
         audioSource.clip = audioClip;
         audioSource.Play();
-        
-        Debug.Log("Consider Yourself: Hovered");
     }
 }

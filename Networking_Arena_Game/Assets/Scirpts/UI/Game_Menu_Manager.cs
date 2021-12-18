@@ -25,10 +25,10 @@ public class Game_Menu_Manager : MonoBehaviour
     public float distance_offset_y;
 
     [Header("Audio")]
-    public AudioSource audioSource;
-    public AudioClip openMenuSFX;
-    public AudioClip closeMenuSFX;
-    public AudioClip clickedButtonSFX;
+    public AudioSource  audioSource;
+    public AudioClip    openMenuSFX;
+    public AudioClip    closeMenuSFX;
+    public AudioClip    clickedButtonSFX;
     
     private void Awake()
     {

@@ -26,10 +26,10 @@ public class Game_Manager : MonoBehaviour
     public player Enemy;
 
     [Header("Audio")]
-    public AudioSource bgMusic;
-    public AudioSource hitHurtSource;
-    public AudioClip hitSFX;
-    public AudioClip hurtSFX;
+    public AudioSource  bgMusic;
+    public AudioSource  hitHurtSource;
+    public AudioClip    hitSFX;
+    public AudioClip    hurtSFX;
 
     [Header("Damage Stats")]
     public int bulletDamage = 3;
