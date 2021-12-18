@@ -334,8 +334,7 @@ public class Player_Controller : MonoBehaviour
     {
         shootRifleSFX.Play();
 
-        Vector3 offset = new Vector3(90, transform.rotation.eulerAngles.y, 0);
-        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction + offset));
+        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.Euler(direction));
         bullet.tag = shooterID.ToString();
 
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
