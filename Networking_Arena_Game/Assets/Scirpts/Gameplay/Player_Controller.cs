@@ -61,7 +61,7 @@ public class Player_Controller : MonoBehaviour
 
 
 
-    public int GetAnimationState() { return -1; } // TODO Aitor
+    public int GetAnimationState() { return animator.GetInteger("State"); } // TODO Aitor
 
 
     //float lookAndMoveAngle;
