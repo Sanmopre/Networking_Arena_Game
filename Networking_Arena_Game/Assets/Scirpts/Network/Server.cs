@@ -6,10 +6,16 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using UnityEngine.UI;
 
 public class Server : MonoBehaviour
 {
     UDP listener = null;
+
+    //-- Console --
+    private List<string> consoleMessages = new List<string>(); 
+    private bool updateConsole = false;                        
+    public Text consoleText;
 
     // --- Client ---
     struct Client
@@ -201,6 +207,18 @@ public class Server : MonoBehaviour
 
     void Update()
     {
+        // console
+        if (updateConsole)
+        {
+            foreach (string message in consoleMessages)
+            {
+                consoleText.text += message + '\n';
+            }
+
+            consoleMessages.Clear();
+            updateConsole = false;
+        }
+
         if (Input.GetKeyDown(KeyCode.Return))
         {
             Debug.Log("Clients:");
@@ -232,6 +250,11 @@ public class Server : MonoBehaviour
                 case UDP.RecvType.FIN:
                     continue;
                 case UDP.RecvType.MESSAGE:
+
+                    //TODO
+                    consoleMessages.Add(received);
+                    updateConsole = true;
+
                     int separator = received.IndexOf(' ');
                     if (separator != -1)
                     {
