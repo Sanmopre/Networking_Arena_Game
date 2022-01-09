@@ -102,6 +102,36 @@ public class Server : MonoBehaviour
     // --- !Client ---
     List<Ref<Client>> clients = new List<Ref<Client>>();
 
+    const int serverPort = 6969;
+    const int maxPorts = 100;
+    List<int> usedports;
+
+    public int GetPort()
+    {
+        int nextPort = serverPort + 1;
+
+        for (int i = 0; i < maxPorts; ++i)
+        {
+            bool found = false;
+            foreach (int port in usedports)
+                if (port == nextPort)
+                {
+                    found = true;
+                    ++nextPort;
+                    break;
+                }
+            if (!found)
+                return nextPort;
+        }
+
+        return -1;
+    }
+
+    public void ErasePort(int port)
+    {
+        usedports.Remove(port);
+    }
+
     // --- Lobby ---
     struct HitRequest
     {

@@ -157,6 +157,13 @@ public class UDP : MonoBehaviour
     {
         thisSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         thisSocket.Blocking = false;
+
+        if (port == 0)
+        {
+            Server server = gameObject.GetComponent<Server>();
+            if (server)
+                port = server.GetPort();
+        }
         IPEndPoint thisAddress = new IPEndPoint(IPAddress.Any, port);
         thisSocket.Bind(thisAddress);
 
@@ -507,6 +514,13 @@ public class UDP : MonoBehaviour
     private void OnDestroy()
     {
         Close();
+
+        if (port == 0)
+        {
+            Server server = gameObject.GetComponent<Server>();
+            if (server)
+                server.ErasePort(port);
+        }
 
         if (thisSocket != null)
             thisSocket.Close();

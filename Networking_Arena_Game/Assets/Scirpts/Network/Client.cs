@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 public class Client : MonoBehaviour
 {
-    EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6969);
+    EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("172.31.16.1"), 6969);
 
     UDP toServer = null;
 
