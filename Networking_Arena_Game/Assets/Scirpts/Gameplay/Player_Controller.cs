@@ -5,11 +5,15 @@ using UnityEngine;
 public class Player_Controller : MonoBehaviour
 {
     private Rigidbody myRigidbody;
+    
+    [Header("Camera")]
     public Camera mainCamera;
+     public bool variableZoom = false;
     public Vector3 cameraOffset;
     public float cameraMovementFollowUpSpeed;
+    public Vector3 cameraPositionForCanvas;
 
-    [Header("Movement Vars")]
+    [Header("Movement")]
     public float movementSpeed;
     private Vector3 moveInput = new Vector3();
     Vector3 pointToLook = new Vector3();
@@ -26,7 +30,7 @@ public class Player_Controller : MonoBehaviour
     public ParticleSystem dashFx;
     private ParticleSystem dashParticles;
 
-    [Header("Shooting variables")]
+    [Header("Shooting")]
     public Transform canonPosition;
     public GameObject bulletPrefab;
     public float bulletForce = 15f;
@@ -58,12 +62,7 @@ public class Player_Controller : MonoBehaviour
     public float rotateThreshold;
     private float dotProduct;
 
-
-
-
     public int GetAnimationState() { return animator.GetInteger("State"); } // TODO Aitor
-
-
     //float lookAndMoveAngle;
 
     [Header("Audio Vars")]
@@ -76,7 +75,6 @@ public class Player_Controller : MonoBehaviour
     Client client = null;
     // --- !Networking ---
 
-    public Vector3 cameraPositionForCanvas;
     void Start()
     {
         myRigidbody = GetComponent<Rigidbody>();
@@ -87,7 +85,7 @@ public class Player_Controller : MonoBehaviour
         if (!Globals.singlePlayer)
             client = GameObject.Find("Client").GetComponent<Client>();
         else
-            gameObject.tag = "0";
+            gameObject.tag = "0";   
     }
 
 
@@ -308,8 +306,27 @@ public class Player_Controller : MonoBehaviour
 
     void CameraFollow()
     {
-        Vector3 desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
-        cameraPositionForCanvas = desiredPosition;
+        Vector3 desiredPosition;
+        if (variableZoom)
+        {
+            float distance = GetDistanceBetweenPlayers();
+            float threshold = 50.0f;
+            Vector3 zoom = new Vector3(cameraOffset.x, cameraOffset.y, cameraOffset.z);
+            if (distance > threshold)
+            {   
+                zoom.y += (distance - threshold);      
+                zoom.z += (distance - threshold);
+            }
+
+            Vector3 avgPlayerPos    = GetAveragePositionBetweenPlayers(1.0f, 1.0f);
+            desiredPosition = new Vector3(avgPlayerPos.x - zoom.x, zoom.y, avgPlayerPos.z - zoom.z);
+        }
+        else
+        {
+            desiredPosition = new Vector3(transform.position.x - cameraOffset.x, cameraOffset.y, transform.position.z - cameraOffset.z);
+            cameraPositionForCanvas = desiredPosition;
+        }
+        
         Vector3 smoothedPosition = Vector3.Lerp(mainCamera.transform.position, desiredPosition, cameraMovementFollowUpSpeed);
         mainCamera.transform.position = smoothedPosition;
     }
@@ -380,6 +397,24 @@ public class Player_Controller : MonoBehaviour
         playerPositionHelper.transform.position = new Vector3(transform.position.x, transform.position.y - 4f, transform.position.z);
         playerPositionHelper.transform.LookAt(enemyPlayer.transform.position);
         playerPositionHelper.transform.eulerAngles = new Vector3(0, playerPositionHelper.transform.eulerAngles.y + 180, 0);
+    }
+
+    float GetDistanceBetweenPlayers()
+    {
+        float X = (transform.position.x - enemyPlayer.transform.position.x);
+        float Y = (transform.position.y - enemyPlayer.transform.position.y);
+        float Z = (transform.position.z - enemyPlayer.transform.position.z);
+
+        return Mathf.Sqrt(X * X + Y * Y + Z * Z);
+    }
+
+    Vector3 GetAveragePositionBetweenPlayers(float playerBias, float enemyBias)
+    {
+        float X = ((transform.position.x * playerBias) + (enemyPlayer.transform.position.x * enemyBias)) * 0.5f;
+        float Y = ((transform.position.y * playerBias) + (enemyPlayer.transform.position.y * enemyBias)) * 0.5f;
+        float Z = ((transform.position.z * playerBias) + (enemyPlayer.transform.position.z * enemyBias)) * 0.5f;
+        
+        return new Vector3(X, Y, Z);
     }
 
     void PlayerStop()
