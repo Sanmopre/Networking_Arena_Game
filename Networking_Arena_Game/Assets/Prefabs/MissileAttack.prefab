@@ -13,7 +13,7 @@ PrefabInstance:
       objectReference: {fileID: 6028146140949575064, guid: 9b0aa1688b81cb145827db637e430ab4, type: 3}
     - target: {fileID: -5025742938623849468, guid: d582e24119de2fa48829a943f469f5a9, type: 3}
       propertyPath: explosionTimer
-      value: 1
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -5025742938623849468, guid: d582e24119de2fa48829a943f469f5a9, type: 3}
       propertyPath: initialVelocity

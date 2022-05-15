@@ -12,9 +12,7 @@ public class Server : MonoBehaviour
 {
     UDP listener = null;
 
-    //-- Console --
-    private List<string> consoleMessages = new List<string>(); 
-    private bool updateConsole = false;                        
+    //-- Console --                
     public Text consoleText;
 
     // --- Client ---
@@ -75,6 +73,7 @@ public class Server : MonoBehaviour
 
         client.value.socket = newClient.AddComponent<UDP>();
         client.value.socket.remoteAddress = remoteAddress;
+
         client.value.state = Client.State.UNINTERESTED;
 
         return true;
@@ -104,7 +103,7 @@ public class Server : MonoBehaviour
 
     const int serverPort = 6969;
     const int maxPorts = 100;
-    List<int> usedports;
+    List<int> usedports = new List<int>();
 
     public int GetPort()
     {
@@ -121,7 +120,10 @@ public class Server : MonoBehaviour
                     break;
                 }
             if (!found)
+            {
+                usedports.Add(nextPort);
                 return nextPort;
+            }
         }
 
         return -1;
@@ -237,18 +239,6 @@ public class Server : MonoBehaviour
 
     void Update()
     {
-        // console
-        if (updateConsole)
-        {
-            foreach (string message in consoleMessages)
-            {
-                consoleText.text += message + '\n';
-            }
-
-            consoleMessages.Clear();
-            updateConsole = false;
-        }
-
         if (Input.GetKeyDown(KeyCode.Return))
         {
             Debug.Log("Clients:");
@@ -282,8 +272,7 @@ public class Server : MonoBehaviour
                 case UDP.RecvType.MESSAGE:
 
                     //TODO
-                    consoleMessages.Add(received);
-                    updateConsole = true;
+                    consoleText.text = received;
 
                     int separator = received.IndexOf(' ');
                     if (separator != -1)
@@ -298,7 +287,11 @@ public class Server : MonoBehaviour
                             {
                                 Ref<Client> newClient = new Ref<Client> { value = new Client(name, password, listener.remoteAddress) };
                                 clients.Add(newClient);
-                                newClient.value.socket.Send("registered");
+                                InputStream iStream = new InputStream();
+                                iStream.AddString("Port");
+                                iStream.AddInt(newClient.value.socket.port);
+                                listener.Send(iStream.GetBuffer());
+                                Log(newClient.value.name + " is Port " + newClient.value.socket.port, true);
                             }
                             else if (listener.remoteAddress.ToString() != client.value.socket.remoteAddress.ToString())
                                 listener.Send("rename");
@@ -312,7 +305,12 @@ public class Server : MonoBehaviour
                                 if (password == client.value.password)
                                 {
                                     if (ClientConnect(client, listener.remoteAddress))
-                                        client.value.socket.Send("logged in");
+                                    {
+                                        InputStream iStream = new InputStream();
+                                        iStream.AddString("Port");
+                                        iStream.AddInt(client.value.socket.port);
+                                        listener.Send(iStream.GetBuffer());
+                                    }
                                     else
                                         listener.Send("imposter");
                                 }
@@ -334,7 +332,7 @@ public class Server : MonoBehaviour
             if (client.value.state == Client.State.DISCONNECTING &&
                  Time.realtimeSinceStartup >= client.value.waitToDisconnect + client.value.WAIT_TIME)
             {
-                Debug.Log("Server Client " + client.value.name + " disconnected!");
+                Log("Server Client " + client.value.name + " disconnected!");
                 ClientDisconnect(client);
                 continue;
             }
@@ -345,15 +343,31 @@ public class Server : MonoBehaviour
                 switch (client.value.socket.Receive(ref received))
                 {
                     case UDP.RecvType.ERROR:
-                        Debug.Log("Server Client " + client.value.name + " received an Error!");
+                        Log("Server Client " + client.value.name + " received an Error!");
                         continue;
                     case UDP.RecvType.FIN:
-                        Debug.Log("Server Client " + client.value.name + " received FIN packet! ");
+                        if (client.value.lobby != null)
+                        {
+                            NetworkStream stream = new NetworkStream();
+                            stream.AddIdData(0, -1);
+                            stream.AddEndFunction(0, false);
+
+                            UDP sock = client.value.lobby.value.player1.value.socket;
+                            if (client.value.lobby.value.player1 == client)
+                                sock = client.value.lobby.value.player2.value.socket;
+                            sock.Send(stream.GetBuffer());
+
+                            LobbyDismatle(client.value.lobby, client);
+                        }
+
+                        Log("Server Client " + client.value.name + " received FIN packet :" + client.value.socket.RemoteAddressStr(), true);
                         client.value.state = Client.State.DISCONNECTING;
                         client.value.waitToDisconnect = Time.realtimeSinceStartup;
                         break;
                     case UDP.RecvType.MESSAGE:
-                        if (Encoding.UTF8.GetString(received) == "quickmatch")
+                        if (Encoding.UTF8.GetString(received) == "Hello")
+                            client.value.socket.WatchForDisconnect(true);
+                        else if (Encoding.UTF8.GetString(received) == "quickmatch")
                         {
                             if (!Globals.localTesting)
                             {
@@ -395,7 +409,7 @@ public class Server : MonoBehaviour
                                 toPlayer1.AddInt(1);
                                 toPlayer1.AddVector3(new Vector3(20.0f, 0.5f, 0));
 
-                                Debug.Log("Server sent match data");
+                                Log("Server sent match data");
                                 client.value.socket.Send(toPlayer1.GetBuffer());
                             }
                         }
@@ -440,7 +454,7 @@ public class Server : MonoBehaviour
 
                                                 lobby.value.player1.value.socket.Send(buffer); // send a hit function to both players
                                                 lobby.value.player2.value.socket.Send(buffer);
-                                                Debug.Log("Hit Server Decition");
+                                                Log("Hit Server Decition");
                                             }
 
                                             lobby.value.hitRequests.RemoveAt(h); // remove the request
@@ -479,7 +493,7 @@ public class Server : MonoBehaviour
                                                     {
                                                         stream.AddHitFunction(hitRequests[h].netId, false, hitRequests[h].damage); // send a hit request to the client and leave the function in data
                                                         found = true;                                                              // so that it is also sent to the other player later
-                                                        Debug.Log("Hit Clients Agreement");
+                                                        Log("Hit Clients Agreement");
                                                         hitRequests.RemoveAt(h);
                                                         break;
                                                     }
@@ -523,7 +537,7 @@ public class Server : MonoBehaviour
 
     IEnumerator StartMatch(Ref<Client> player1, Ref<Client> player2)
     {
-        Debug.Log("Server notified match");
+        Log("Server notified match");
         player1.value.socket.Send("match found");
         player2.value.socket.Send("match found");
 
@@ -547,7 +561,7 @@ public class Server : MonoBehaviour
         toPlayer2.AddInt(0);
         toPlayer2.AddVector3(new Vector3(-20.0f, 5f, 0));
 
-        Debug.Log("Server sent match data");
+        Log("Server sent match data");
         player1.value.socket.Send(toPlayer1.GetBuffer());
         player2.value.socket.Send(toPlayer2.GetBuffer());
     }
@@ -562,6 +576,27 @@ public class Server : MonoBehaviour
             }
         index = -1;
         return null;
+    }
+
+    void Log(string log, bool permanent = false)
+    {
+        Transform[] transforms = GameObject.Find("CanvasServer").GetComponentsInChildren<Transform>(true);
+        if (transforms.Length > 0)
+        {
+            foreach (Transform transform in transforms)
+                if (!permanent)
+                {
+                    if (transform.name == "Console")
+                        transform.gameObject.GetComponent<Text>().text = log;
+                }
+            else
+                {
+                    if (transform.name == "ServerText")
+                        transform.gameObject.GetComponent<Text>().text = log;
+                }
+        }
+        else
+            Debug.Log(name + " : " + log);
     }
 
     private void OnDestroy()

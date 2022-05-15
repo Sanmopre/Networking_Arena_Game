@@ -8,10 +8,10 @@ using System.Threading;
 using System.Text;
 
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UDP : MonoBehaviour
 {
-    // TODO: ADD PING SYSTEM TO DETECT DISCONNECTIONS AUTOMATICALLY (POOOG)
     public int port = 0;
 
     [HideInInspector]
@@ -25,12 +25,24 @@ public class UDP : MonoBehaviour
     [HideInInspector]
     static public readonly float SEND_RATE = 0.008f;
     [HideInInspector]
-    static public readonly byte MESSAGE_SEPARATOR = Encoding.UTF8.GetBytes("\\")[0];
+    static public readonly byte[] ALIVE = BitConverter.GetBytes(-2);
+    [HideInInspector]
+    static public readonly float DISCONNECT_THRESHOLD = 5.0f;
 
     Socket thisSocket = null;
     public EndPoint remoteAddress = null;
     int messageID = 0;
     public bool listenMode = false;
+
+    bool watchForDisconnect = false;
+    float lastAlive = 0.0f;
+    float lastAliveSent = 0.0f;
+
+    public void WatchForDisconnect(bool enable)
+    {
+        watchForDisconnect = enable;
+        lastAlive = Time.realtimeSinceStartup;
+    }
 
     float roundTrip = 0.0f;
     public float GetRoundTripTime() { return roundTrip; } // to jordi: mad? what r u gonna do? cry about it? boohoo
@@ -160,14 +172,22 @@ public class UDP : MonoBehaviour
 
         if (port == 0)
         {
-            Server server = gameObject.GetComponent<Server>();
-            if (server)
-                port = server.GetPort();
+            GameObject serverGo = GameObject.Find("Server");
+            if (serverGo)
+            {
+                Server server = serverGo.GetComponent<Server>();
+                if (server)
+                    port = server.GetPort();
+            }
         }
+        if (port < 0)
+            port = 0;
         IPEndPoint thisAddress = new IPEndPoint(IPAddress.Any, port);
         thisSocket.Bind(thisAddress);
 
         remoteAddress = new IPEndPoint(IPAddress.None, 0);
+
+        lastAliveSent = Time.realtimeSinceStartup;
 
         // --- Shady stuffy ---
         thread = new Thread(SendMessages);
@@ -176,8 +196,22 @@ public class UDP : MonoBehaviour
 
     public void Update()
     {
+        if (watchForDisconnect)
+            if (Time.realtimeSinceStartup >= lastAlive + DISCONNECT_THRESHOLD)
+            {
+                Debug.Log(name + " ENDED CONNECTION DUE TO NO ALIVE!");
+                recvPackets.Add(new RecvPacket(-2, RecvType.FIN_END, null, remoteAddress));
+                watchForDisconnect = false;
+            }
+
+        if (watchForDisconnect && Time.realtimeSinceStartup >= timeLastSent + 1.0f)
+            Send(ALIVE);
         if (sendBuffer.Count > 0 && Time.realtimeSinceStartup >= timeLastSent + SEND_RATE)
+        {
+            if (watchForDisconnect)
+                Send(ALIVE);
             SendPackets();
+        }
 
         while (thisSocket.Poll(0, SelectMode.SelectRead))
             ReceivePackets();
@@ -191,16 +225,16 @@ public class UDP : MonoBehaviour
                 }
     }
 
-    public RecvType Receive(ref string message, bool setRemote = false)
+    public RecvType Receive(ref string message, bool setRemote = false, bool ignoreRemote = false)
     {
         byte[] inputPacket = null;
-        RecvType output =  Receive(ref inputPacket, setRemote);
+        RecvType output =  Receive(ref inputPacket, setRemote, ignoreRemote);
         if (inputPacket != null)
             message = Encoding.UTF8.GetString(inputPacket);
         return output;
     }
 
-    public RecvType Receive(ref byte[] message, bool setRemote = false)
+    public RecvType Receive(ref byte[] message, bool setRemote = false, bool ignoreRemote = false)
     {
         if (recvPackets.Count == 0)
             return RecvType.EMPTY;
@@ -208,7 +242,7 @@ public class UDP : MonoBehaviour
         RecvPacket packet = recvPackets[0];
         recvPackets.RemoveAt(0);
 
-        if (packet.from.ToString() != remoteAddress.ToString())
+        if (!ignoreRemote && packet.from.ToString() != remoteAddress.ToString())
             if (setRemote)
             {
                 Close();
@@ -221,7 +255,7 @@ public class UDP : MonoBehaviour
                 return RecvType.EMPTY;
             }
 
-        if (packet.type == RecvType.MESSAGE || packet.type == RecvType.FIN_START)
+        if (!ignoreRemote && packet.type == RecvType.MESSAGE || packet.type == RecvType.FIN_START)
         {
             SendAcknowledgement(packet.id, packet.from);
 
@@ -345,6 +379,12 @@ public class UDP : MonoBehaviour
             }
             else
             {
+                if (recvID == -2)
+                {
+                    lastAlive = Time.realtimeSinceStartup;
+                    continue;
+                }
+
                 ReportError("UDP_" + name + " Acknowledged -> " + recvID);
                 bool exit = false;
                 for (int i = 0; i < notAcknowleged.Count; ++i)
@@ -383,7 +423,7 @@ public class UDP : MonoBehaviour
                 recvPackets.Add(new RecvPacket(recvID, RecvType.FIN_START, toReceive, from));
                 continue;
             }
-            
+
             toReceive = ByteArray.TrimEnd(toReceive);
             recvPackets.Add(new RecvPacket(recvID, RecvType.MESSAGE, toReceive, from));
         }
@@ -396,6 +436,13 @@ public class UDP : MonoBehaviour
 
     public int Send(byte[] outputPacket)
     {
+        if (outputPacket == ALIVE)
+        {
+            Debug.Log(name + " RECEIVED ALIVE!");
+            SendAcknowledgement(-2, remoteAddress);
+            return -2;
+        }
+
         if (outputPacket != null)
             outputPacket = ByteArray.TrimEnd(outputPacket);
         else
@@ -503,21 +550,38 @@ public class UDP : MonoBehaviour
         lastID = -1;
         messageID = 0;
 
+        WatchForDisconnect(false);
+
         remoteAddress = new IPEndPoint(IPAddress.None, 0);
     }
 
     void ReportError(string error)
     {
-        //Debug.Log(error);
+        GameObject canvas = GameObject.Find("CanvasServer");
+        if (canvas == null)
+        {
+            Debug.Log(name + " : " + error);
+            return;
+        }
+        Transform[] transforms = canvas.GetComponentsInChildren<Transform>(true);
+        if (transforms.Length > 0)
+        {
+            foreach (Transform transform in transforms)
+                if (transform.name == "Console")
+                    transform.gameObject.GetComponent<Text>().text = error;
+        }
+        else
+            Debug.Log(name + " : " + error);
     }
 
     private void OnDestroy()
     {
         Close();
 
-        if (port == 0)
+        GameObject serverGo = GameObject.Find("Server");
+        if (serverGo)
         {
-            Server server = gameObject.GetComponent<Server>();
+            Server server = serverGo.GetComponent<Server>();
             if (server)
                 server.ErasePort(port);
         }
@@ -531,8 +595,8 @@ public class UDP : MonoBehaviour
 
     // --- Shady stuffy ---
 
-    bool jitter = true;
-    bool packetLoss = true;
+    bool jitter = false;
+    bool packetLoss = false;
     int minJitt = 10;
     int maxJitt = 70;
     int lossThreshold = 1;

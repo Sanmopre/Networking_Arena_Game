@@ -5,7 +5,7 @@ using UnityEngine;
 public class MissileAttack : MonoBehaviour
 {
     // Start is called before the first frame update
-    public float explosionTimer = 2.0f;
+    public float explosionTimer = 0.5f;
     public float explosionRadius = 10.0f;
     public float initialVelocity = 10.0f;
 

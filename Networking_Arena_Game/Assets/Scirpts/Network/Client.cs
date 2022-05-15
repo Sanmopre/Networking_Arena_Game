@@ -1,6 +1,7 @@
 using System.Net;
 using System.Collections.Generic;
 using System.Text;
+using System;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,15 +9,14 @@ using UnityEngine.SceneManagement;
 
 public class Client : MonoBehaviour
 {
-    EndPoint serverAddress = new IPEndPoint(IPAddress.Parse("172.31.16.1"), 6969);
+    static readonly string serverIP = "79.155.77.169";
+    EndPoint serverAddress = new IPEndPoint(IPAddress.Parse(serverIP), 6969);
 
     UDP toServer = null;
 
     bool toRegister;
     public string username;
     string password;
-    
-    int notAcknowleged;
 
     enum State
     {
@@ -163,12 +163,9 @@ public class Client : MonoBehaviour
                 char type = 'l';
                 if (toRegister)
                     type = 'r';
-                notAcknowleged = toServer.Send(type + username + " " + password);
-                if (notAcknowleged != -1)
-                {
-                    state = State.RECV_ID_CONF;
-                    loginTimer = Time.realtimeSinceStartup; // TODO REMOVE
-                }
+                toServer.Send(type + username + " " + password);
+                state = State.RECV_ID_CONF;
+                loginTimer = Time.realtimeSinceStartup; // TODO REMOVE
                 break;
             case State.RECV_ID_CONF:
                 if (Time.realtimeSinceStartup >= loginTimer + loginMaxTime) // TODO REMOVE
@@ -179,8 +176,11 @@ public class Client : MonoBehaviour
                 while (toServer.CanReceive())
                 {
                     string received = "";
-                    switch (toServer.Receive(ref received, true))
+                    switch (toServer.Receive(ref received, false, true))
                     {
+                        case UDP.RecvType.EMPTY:
+                            Log("Empty");
+                            continue;
                         case UDP.RecvType.ERROR:
                             continue;
                         case UDP.RecvType.FIN:
@@ -188,12 +188,23 @@ public class Client : MonoBehaviour
                             state = State.DISCONNECTED;
                             break;
                         case UDP.RecvType.MESSAGE:
-                            if (received == "registered" || received == "logged in")
+                            Log("Received: " + received, true);
+                            if (received.Substring(0, 4) == "Port")
                             {
+                                OutputStream oStream = new OutputStream(Encoding.UTF8.GetBytes(received));
+                                oStream.GetString(4);
+                                int newPort = oStream.GetInt();
+
+                                toServer.Close();
+                                toServer.remoteAddress = new IPEndPoint(IPAddress.Parse(serverIP), newPort);
+                                toServer.Send("Hello");
+
                                 LoadMainMenu();
 
                                 Log("Succesfully " + received + "!");
                                 state = State.IN_MENU;
+
+                                toServer.WatchForDisconnect(true);
                             }
                             else
                             {
@@ -380,7 +391,7 @@ public class Client : MonoBehaviour
                             NetworkStream.Data data = NetworkStream.Deserialize(received);
                             if (data == null)
                                 break;
-                            if (data.round != game.round)
+                            if (data.round != game.round && data.round >= 0)
                                 break;
 
                             for (int i = 0; i < data.functions.Count; ++i)
@@ -475,6 +486,8 @@ public class Client : MonoBehaviour
 
                 break;
             case State.DISCONNECTED:
+                Debug.Log(name + " DISCONNECTED!");
+                toServer.WatchForDisconnect(false);
                 LoadIdentificationMenu();
                 state = State.SET_ID_DATA;
                 break;
@@ -572,7 +585,10 @@ public class Client : MonoBehaviour
     void Log(string toLog, bool debug = true)
     {
         if (debug)
+        {
+            FindCanvasObjectByName("CurrentServer_Text").GetComponent<Text>().text = toLog;
             Debug.Log(toLog);
+        }
         if (errorLogText != null)
             errorLogText.text = toLog;
     }
