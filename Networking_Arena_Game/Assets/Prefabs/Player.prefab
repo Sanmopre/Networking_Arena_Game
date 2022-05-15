@@ -257,8 +257,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
+  variableZoom: 0
   cameraOffset: {x: 0, y: 45, z: 20}
   cameraMovementFollowUpSpeed: 0.075
+  cameraPositionForCanvas: {x: 0, y: 0, z: 0}
   movementSpeed: 30
   speedReductionWhileShooting: 2
   dashCooldown: 2
@@ -285,7 +287,6 @@ MonoBehaviour:
   dashSFX: {fileID: 1400612146962294153}
   shootRifleSFX: {fileID: 6207643508132164838}
   shootShotgunSFX: {fileID: 4287104699241962629}
-  cameraPositionForCanvas: {x: 0, y: 0, z: 0}
 --- !u!82 &1400612146962294153
 AudioSource:
   m_ObjectHideFlags: 0
